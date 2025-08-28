@@ -515,7 +515,8 @@
             WEAPON_R3_AVAILABLE: true,
             MUZZLE_DURATION: 0.12,
             DEATH_ANIMATION_SPEED: 8,
-            BOSS_SPAWN_DELAY: 10,
+            BOSS_SPAWN_DELAY:45,
+            
             BOSS_SPAWN_STRENGTH_THRESHOLD: 10,
             BOSS_SPAWN_BOOST: 0.1,
             BOSS_HEALTH_MULTIPLIER: 1.5,
@@ -1270,9 +1271,9 @@
             const playerStrength = player.gunLevel + player.rampartSize / 5;
             
             const timeSinceLastBoss = gameTime - lastBossSpawnTime;
-            const bossWaveClearTime = 2;
+            const bossWaveClearTime = 5;
             
-            const bossProb = 0.4 + difficulty * 0.05;
+            const bossProb = Math.min(0.15 + difficulty * 0.02, 0.25);
             if (gameTime > CONFIG.BOSS_SPAWN_DELAY && 
                 timeSinceLastBoss > bossWaveClearTime && 
                 Math.random() < bossProb) {
@@ -1287,7 +1288,8 @@
                         return false;
                     }
                     return true;
-                });
+                }
+            );
                 
                 zombies.push(new Zombie(600, -500, true));
                 lastBossSpawnTime = gameTime;
@@ -1296,10 +1298,10 @@
                 return;
             }
             
-            const aliveBosses = zombies.filter(z => z.isBoss && !z.dying);
-            if (timeSinceLastBoss < 1 || aliveBosses.length > 0) {
-                return;
-            }
+const aliveBosses = zombies.filter(z => z.isBoss && !z.dying);
+if (aliveBosses.length > 1) {
+    return;
+}
             
             const numGroups = 3 + Math.floor(difficulty / 2);
             const groupSize = 3;
