@@ -1,0 +1,1030 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Last War: Survival</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #000;
+            overflow: hidden;
+            font-family: 'Arial Black', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        #gameCanvas {
+            max-height: 100vh;
+            max-width: 100vw;
+            border: 3px solid #ff00ff;
+            box-shadow: 0 0 30px rgba(255, 0, 255, 0.5);
+        }
+
+        #ui {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: white;
+            text-align: center;
+            z-index: 10;
+            background: linear-gradient(135deg, rgba(0,0,0,0.9), rgba(50,0,50,0.9));
+            padding: 15px;
+            border-radius: 15px;
+            border: 2px solid #ff00ff;
+            min-width: 450px;
+        }
+
+        .stat {
+            display: inline-block;
+            margin: 0 10px;
+            font-size: 16px;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+
+        .army { color: #0f0; }
+        .gun { color: #0ff; }
+        .power { color: #f0f; }
+        .score { color: #ff0; }
+
+        #startScreen {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: linear-gradient(135deg, rgba(20, 20, 40, 0.98), rgba(50, 0, 50, 0.98));
+            color: white;
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            z-index: 100;
+            border: 3px solid #ff00ff;
+            box-shadow: 0 0 50px rgba(255, 0, 255, 0.5);
+        }
+
+        button {
+            background: linear-gradient(135deg, #f06, #ff00ff);
+            color: white;
+            border: none;
+            padding: 20px 40px;
+            font-size: 24px;
+            border-radius: 15px;
+            cursor: pointer;
+            margin-top: 20px;
+            text-transform: uppercase;
+            font-weight: bold;
+            letter-spacing: 2px;
+            box-shadow: 0 5px 20px rgba(255, 0, 255, 0.5);
+            transition: all 0.3s;
+        }
+
+        button:hover {
+            transform: scale(1.1);
+            box-shadow: 0 8px 30px rgba(255, 0, 255, 0.8);
+        }
+
+        h1 {
+            color: #0ff;
+            margin-bottom: 20px;
+            font-size: 36px;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.8);
+        }
+
+        .controls {
+            margin: 20px 0;
+            font-size: 16px;
+            line-height: 2;
+            background: rgba(0,0,0,0.5);
+            padding: 20px;
+            border-radius: 10px;
+        }
+
+        #gameOver {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 0, 0, 0.95);
+            color: white;
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            z-index: 100;
+            display: none;
+            border: 3px solid #fff;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas"></canvas>
+    
+    <div id="ui" style="display: none;">
+        <div>
+            <span class="stat army">🪖 Army: <span id="armySize">3</span></span>
+            <span class="stat gun">🔫 Gun: Lv<span id="gunLevel">1</span></span>
+            <span class="stat power">⚡ Power: <span id="shotPower">1</span></span>
+            <span class="stat score">⭐ Score: <span id="score">0</span></span>
+        </div>
+    </div>
+
+    <div id="startScreen">
+        <h1>🔥 LAST WAR: SURVIVAL 🔥</h1>
+        <div class="controls">
+            <p>⬅️➡️ or A/D to move between lanes</p>
+            <p>🎯 Middle: Auto-kills entire front row!</p>
+            <p>🔫 Left: Shoot gun upgrades (faster shots)</p>
+            <p>🪖 Right: Shoot army upgrades (more kills)</p>
+            <p>⚠️ Don't let zombies touch you!</p>
+        </div>
+        <button onclick="startGame()">START BATTLE</button>
+    </div>
+
+    <div id="gameOver">
+        <h2>💀 GAME OVER 💀</h2>
+        <p>Final Score: <span id="finalScore">0</span></p>
+        <button onclick="location.reload()">TRY AGAIN</button>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        canvas.width = 1200;
+        canvas.height = 1800;
+        
+        // Declare startGame function early to avoid undefined errors
+        function startGame() {
+            gameRunning = true;
+            gameTime = 0;
+            player.lane = 1;
+            player.armySize = CONFIG.INITIAL_ARMY_SIZE;
+            player.gunLevel = 1;
+            player.score = 0;
+            
+            zombies = [];
+            panels = [];
+            bullets = [];
+            particles = [];
+            explosions = [];
+            
+            document.getElementById('startScreen').style.display = 'none';
+            document.getElementById('ui').style.display = 'block';
+            document.getElementById('gameOver').style.display = 'none';
+            
+            lastTime = performance.now();
+            requestAnimationFrame(gameLoop);
+        }
+        
+        // Game Configuration
+        const CONFIG = {
+            ZOMBIES_PER_GROUP: 9,
+            GROUPS_PER_WAVE: 3,
+            BASE_KILLS_PER_SHOT: 3,
+            ARMY_KILL_MULTIPLIER: 0, // Set to 0 so army size doesn't affect shot power
+            GUN_DAMAGE_PER_LEVEL: 1,
+            GUN_POWER_MULTIPLIER: 1, // Only gun level affects shot power
+            ZOMBIE_SPEED: 150,
+            INITIAL_SPAWN_Y: -150,
+            WAVE_SPAWN_TIME: 1.5,
+            GUN_UPGRADE_TIME: 1.0,
+            ARMY_UPGRADE_TIME: 0.8,
+            GUN_PANEL_FREQUENCY: 0.3,
+            ARMY_PANEL_FREQUENCY: 0.3,
+            FIRE_RATE: 0.25,
+            BULLET_SPEED: 1200,
+            INITIAL_ARMY_SIZE: 3,
+            // Icon scaling variables
+            ZOMBIE_NORMAL_SIZE: 48,
+            ZOMBIE_BOSS_SIZE: 120,
+            PANEL_SIZE: 120,
+            ARMY_TANK_ICON_SIZE: 36,
+            MAIN_TANK_SIZE: 180,
+            BULLET_SIZE: 24,
+            TANK_ROW_SPACING: 34, // Distance between tank rows (less than icon size = overlap)
+        };
+        
+        // Image loading system
+        const images = {};
+        let imagesLoaded = 0;
+        let totalImages = 0;
+        
+        function loadImage(name, url) {
+            totalImages++;
+            const img = new Image();
+            img.onload = () => {
+                images[name] = img;
+                imagesLoaded++;
+                console.log('Loaded:', name);
+            };
+            img.onerror = () => {
+                console.warn('Failed to load:', name, 'from', url);
+                imagesLoaded++;
+            };
+            img.src = url;
+        }
+        
+        loadImage('tank1', 'assets/tank1.png');
+        loadImage('tank2', 'assets/tank2.png');
+        loadImage('tank3', 'assets/tank3.png');
+        loadImage('zombieNormal', 'assets/zombie.png');
+        loadImage('zombieBoss', 'assets/zombie_boss.png');
+        loadImage('backgroundTile', 'assets/background_tile.png');
+        loadImage('tankIcon', 'assets/tank_icon.png');
+        loadImage('gunIcon', 'assets/gun_icon.png');
+        loadImage('explosion', 'assets/explosion.png');
+        
+        // Audio
+        const sounds = {};
+        function loadSound(name, path) {
+            const audio = new Audio(path);
+            audio.preload = 'auto';
+            sounds[name] = audio;
+        }
+        
+        function playSound(name, volume = 0.3) {
+            if (sounds[name]) {
+                const sound = sounds[name].cloneNode();
+                sound.volume = volume;
+                sound.play().catch(() => {});
+            }
+        }
+        
+        loadSound('explosion', 'assets/explosion.wav');
+        
+        // Game state
+        let gameRunning = false;
+        let gameTime = 0;
+        let shootTimer = 0;
+        let bgOffset = 0;
+        let waveTimer = 0;
+        let nextWaveTime = 1;
+        
+        // Player
+        const player = {
+            lane: 1,
+            x: 600,
+            y: 1560,
+            armySize: 3,
+            gunLevel: 1,
+            score: 0
+        };
+        
+        // Game entities
+        let zombies = [];
+        let panels = [];
+        let bullets = [];
+        let particles = [];
+        let explosions = [];
+        
+        // Lane positions
+        const LANES = [120, 600, 1080];
+        const COMBAT_ZONE_START = 240;
+        const COMBAT_ZONE_END = 960;
+        
+        // Controls
+        document.addEventListener('keydown', e => {
+            if (e.key.toLowerCase() === 'a' || e.key === 'ArrowLeft') {
+                player.lane = Math.max(0, player.lane - 1);
+            }
+            if (e.key.toLowerCase() === 'd' || e.key === 'ArrowRight') {
+                player.lane = Math.min(2, player.lane + 1);
+            }
+        });
+        
+        // Zombie class
+        class Zombie {
+            constructor(x, y, isBoss = false) {
+                this.x = x;
+                this.y = y;
+                this.isBoss = isBoss;
+                this.width = isBoss ? CONFIG.ZOMBIE_BOSS_SIZE : CONFIG.ZOMBIE_NORMAL_SIZE;
+                this.height = isBoss ? CONFIG.ZOMBIE_BOSS_SIZE : CONFIG.ZOMBIE_NORMAL_SIZE;
+                this.maxHealth = isBoss ? (20 + Math.floor(Math.random() * 20)) : 1;
+                this.health = this.maxHealth;
+                this.color = isBoss ? '#ff00ff' : '#cc0000';
+                this.dying = false;
+                this.hitFlash = 0;
+            }
+            
+            update(deltaTime) {
+                if (!this.dying) {
+                    this.y += CONFIG.ZOMBIE_SPEED * deltaTime;
+                }
+                if (this.hitFlash > 0) {
+                    this.hitFlash -= deltaTime;
+                }
+            }
+            
+            hit(damage = 1) {
+                this.health -= damage;
+                this.hitFlash = 0.2;
+                playSound('explosion', 0.2);
+                
+                if (this.health <= 0) {
+                    this.dying = true;
+                    player.score += this.isBoss ? 500 : 20;
+                    
+                    if (this.isBoss) {
+                        playSound('explosion', 0.5);
+                        for (let i = 0; i < 30; i++) {
+                            particles.push({
+                                x: this.x,
+                                y: this.y,
+                                vx: (Math.random() - 0.5) * 90,
+                                vy: (Math.random() - 0.5) * 90,
+                                life: 1.5,
+                                color: ['#ff00ff', '#ff0000', '#ffaa00'][i % 3],
+                                size: 30
+                            });
+                        }
+                    }
+                    return true;
+                }
+                return false;
+            }
+            
+            draw() {
+                if (this.dying) return;
+                
+                if (this.isBoss && images.zombieBoss) {
+                    ctx.save();
+                    if (this.hitFlash > 0) {
+                        ctx.filter = 'brightness(2)';
+                    }
+                    ctx.drawImage(images.zombieBoss, 
+                        this.x - this.width/2, this.y - this.height/2, 
+                        this.width, this.height);
+                    ctx.restore();
+                } else if (!this.isBoss && images.zombieNormal) {
+                    ctx.save();
+                    if (this.hitFlash > 0) {
+                        ctx.filter = 'brightness(2)';
+                    }
+                    ctx.drawImage(images.zombieNormal, 
+                        this.x - this.width/2, this.y - this.height/2, 
+                        this.width, this.height);
+                    ctx.restore();
+                } else {
+                    ctx.fillStyle = this.hitFlash > 0 ? '#ffffff' : this.color;
+                    ctx.fillRect(this.x - this.width/2, this.y - this.height/2, this.width, this.height);
+                    
+                    if (!this.isBoss) {
+                        ctx.fillStyle = '#ffff00';
+                        ctx.fillRect(this.x - 15, this.y - 9, 9, 9);
+                        ctx.fillRect(this.x + 6, this.y - 9, 9, 9);
+                    }
+                }
+                
+                if (this.isBoss) {
+                    const barWidth = 150;
+                    const barHeight = 24;
+                    const barY = this.y - this.height/2 - 45;
+                    
+                    ctx.fillStyle = 'rgba(0,0,0,0.8)';
+                    ctx.fillRect(this.x - barWidth/2, barY, barWidth, barHeight);
+                    
+                    const healthPercent = this.health / this.maxHealth;
+                    ctx.fillStyle = healthPercent > 0.5 ? '#00ff00' : healthPercent > 0.25 ? '#ffff00' : '#ff0000';
+                    ctx.fillRect(this.x - barWidth/2, barY, barWidth * healthPercent, barHeight);
+                    
+                    ctx.strokeStyle = '#fff';
+                    ctx.lineWidth = 6;
+                    ctx.strokeRect(this.x - barWidth/2, barY, barWidth, barHeight);
+                    
+                    ctx.fillStyle = '#fff';
+                    ctx.font = 'bold 30px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(`${this.health}/${this.maxHealth}`, this.x, barY - 9);
+                }
+            }
+        }
+        
+        // Panel class
+        class Panel {
+            constructor(x, y, type) {
+                this.x = x;
+                this.y = y;
+                this.width = CONFIG.PANEL_SIZE;
+                this.height = CONFIG.PANEL_SIZE;
+                this.type = type;
+                this.color = this.type === 'army' ? '#4CAF50' : '#2196F3';
+                this.value = this.type === 'army' ? (Math.random() > 0.6 ? 5 : 3) : 1;
+                this.maxProgress = this.type === 'army' ? 0.8 : 1.2;
+                this.progress = 0;
+                this.collected = false;
+            }
+            
+            update(deltaTime) {
+                this.y += CONFIG.ZOMBIE_SPEED * deltaTime;
+            }
+            
+            hit() {
+                if (this.collected) return false;
+                
+                this.progress += 0.35;
+                playSound('explosion', 0.1);
+                
+                for (let i = 0; i < 3; i++) {
+                    particles.push({
+                        x: this.x + (Math.random() - 0.5) * 60,
+                        y: this.y + (Math.random() - 0.5) * 60,
+                        vx: (Math.random() - 0.5) * 24,
+                        vy: -Math.random() * 24,
+                        life: 0.5,
+                        color: this.color,
+                        size: 12
+                    });
+                }
+                
+                if (this.progress >= this.maxProgress) {
+                    this.collected = true;
+                    playSound('explosion', 0.4);
+                    
+                    if (this.type === 'army') {
+                        player.armySize = Math.min(player.armySize + this.value, 50);
+                        player.score += this.value * 50;
+                    } else {
+                        player.gunLevel = Math.min(player.gunLevel + 1, 10);
+                        player.score += 200;
+                    }
+                    
+                    explosions.push({
+                        x: this.x,
+                        y: this.y,
+                        radius: 0,
+                        maxRadius: 150,
+                        color: this.color
+                    });
+                    
+                    return true;
+                }
+                
+                return false;
+            }
+            
+            draw() {
+                if (this.collected) return;
+                
+                if (this.type === 'army' && images.tankIcon) {
+                    ctx.drawImage(images.tankIcon, 
+                        this.x - this.width/2, this.y - this.height/2, 
+                        this.width, this.height);
+                } else if (this.type === 'gun' && images.gunIcon) {
+                    ctx.drawImage(images.gunIcon, 
+                        this.x - this.width/2, this.y - this.height/2, 
+                        this.width, this.height);
+                } else {
+                    const gradient = ctx.createLinearGradient(
+                        this.x - this.width/2, this.y - this.height/2,
+                        this.x + this.width/2, this.y + this.height/2
+                    );
+                    gradient.addColorStop(0, this.type === 'army' ? '#4CAF50' : '#2196F3');
+                    gradient.addColorStop(1, this.type === 'army' ? '#2E7D32' : '#1565C0');
+                    ctx.fillStyle = gradient;
+                    ctx.fillRect(this.x - this.width/2, this.y - this.height/2, this.width, this.height);
+                    
+                    ctx.fillStyle = '#fff';
+                    ctx.font = 'bold 60px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(this.type === 'army' ? '🪖' : '🔫', this.x, this.y + 15);
+                }
+                
+                const barWidth = 135;
+                const barHeight = 24;
+                const barY = this.y - this.height/2 - 45;
+                
+                ctx.fillStyle = 'rgba(0,0,0,0.8)';
+                ctx.fillRect(this.x - barWidth/2, barY, barWidth, barHeight);
+                
+                const fillWidth = (this.progress / this.maxProgress) * barWidth;
+                ctx.fillStyle = '#ffff00';
+                ctx.fillRect(this.x - barWidth/2, barY, fillWidth, barHeight);
+                
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 3;
+                ctx.strokeRect(this.x - barWidth/2, barY, barWidth, barHeight);
+                
+                ctx.fillStyle = 'white';
+                ctx.font = 'bold 30px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText(this.type === 'army' ? `+${this.value}` : 'GUN+1', this.x, this.y - this.height/2 - 60);
+            }
+        }
+        
+        // Bullet classes
+        class CombatBullet {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.speed = CONFIG.BULLET_SPEED;
+                this.width = CONFIG.BULLET_SIZE;
+                this.height = CONFIG.BULLET_SIZE * 1.5;
+            }
+            
+            update(deltaTime) {
+                this.y -= this.speed * deltaTime;
+                
+                const sortedZombies = zombies
+                    .filter(z => !z.dying)
+                    .sort((a, b) => b.y - a.y);
+                
+                const killCount = getShotPower();
+                
+                for (let i = 0; i < sortedZombies.length; i++) {
+                    const zombie = sortedZombies[i];
+                    const dx = Math.abs(this.x - zombie.x);
+                    const dy = Math.abs(this.y - zombie.y);
+                    
+                    if (dy < zombie.height + this.height && dx < (COMBAT_ZONE_END - COMBAT_ZONE_START) / 2) {
+                        const hitY = zombie.y;
+                        const rowZombies = sortedZombies.filter(z => 
+                            Math.abs(z.y - hitY) < 120 && 
+                            z.x >= COMBAT_ZONE_START && z.x <= COMBAT_ZONE_END
+                        );
+                        
+                        const toKill = rowZombies
+                            .sort((a, b) => a.x - b.x)
+                            .slice(0, Math.min(killCount, rowZombies.length));
+                        
+                        this.explodeAndKill(toKill, hitY);
+                        return true;
+                    }
+                }
+                
+                return this.y < -90;
+            }
+            
+            explodeAndKill(targets, yPos) {
+                explosions.push({
+                    x: this.x,
+                    y: yPos,
+                    radius: 0,
+                    maxRadius: 90,
+                    color: '#ffff00'
+                });
+                
+                targets.forEach(zombie => {
+                    const damage = player.gunLevel * CONFIG.GUN_DAMAGE_PER_LEVEL;
+                    const isDead = zombie.hit(damage);
+                    
+                    if (isDead) {
+                        for (let i = 0; i < 10; i++) {
+                            particles.push({
+                                x: zombie.x,
+                                y: zombie.y,
+                                vx: (Math.random() - 0.5) * 45,
+                                vy: (Math.random() - 0.5) * 45,
+                                life: 0.8,
+                                color: zombie.isBoss ? '#ff00ff' : '#ff0000',
+                                size: 15
+                            });
+                        }
+                    }
+                });
+            }
+            
+            draw() {
+                const bulletLevel = Math.min(3, Math.ceil(player.gunLevel / 3));
+                const size = this.width + (bulletLevel - 1) * 12;
+                const height = this.height + (bulletLevel - 1) * 12;
+                
+                if (bulletLevel === 1) {
+                    ctx.fillStyle = '#ffff00';
+                    ctx.fillRect(this.x - size/2, this.y - height/2, size, height);
+                } else if (bulletLevel === 2) {
+                    const gradient = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, size);
+                    gradient.addColorStop(0, '#ffffff');
+                    gradient.addColorStop(0.5, '#ff8800');
+                    gradient.addColorStop(1, '#ff4400');
+                    ctx.fillStyle = gradient;
+                    ctx.fillRect(this.x - size/2, this.y - height/2, size, height);
+                } else {
+                    const gradient = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, size * 1.5);
+                    gradient.addColorStop(0, '#ffffff');
+                    gradient.addColorStop(0.3, '#ff00ff');
+                    gradient.addColorStop(0.6, '#8800ff');
+                    gradient.addColorStop(1, 'transparent');
+                    ctx.fillStyle = gradient;
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, size, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                
+                ctx.fillStyle = bulletLevel === 1 ? 'rgba(255, 255, 0, 0.4)' :
+                               bulletLevel === 2 ? 'rgba(255, 136, 0, 0.6)' :
+                               'rgba(255, 0, 255, 0.8)';
+                ctx.fillRect(this.x - 6, this.y, 12, 60 + bulletLevel * 15);
+            }
+        }
+        
+        class PanelBullet {
+            constructor(x, y, lane) {
+                this.x = x;
+                this.y = y;
+                this.lane = lane;
+                this.speed = CONFIG.BULLET_SPEED;
+                this.width = CONFIG.BULLET_SIZE;
+                this.height = CONFIG.BULLET_SIZE * 1.5;
+            }
+            
+            update(deltaTime) {
+                this.y -= this.speed * deltaTime;
+                
+                const targetType = this.lane === 0 ? 'gun' : 'army';
+                for (let panel of panels) {
+                    if (panel.type === targetType && !panel.collected) {
+                        const dx = Math.abs(this.x - panel.x);
+                        const dy = Math.abs(this.y - panel.y);
+                        
+                        if (dx < 90 && dy < 90) {
+                            if (panel.hit()) {
+                                panels = panels.filter(p => p !== panel);
+                            }
+                            return true;
+                        }
+                    }
+                }
+                
+                return this.y < -30;
+            }
+            
+            draw() {
+                ctx.fillStyle = this.lane === 0 ? '#00ffff' : '#00ff00';
+                ctx.fillRect(this.x - this.width/2, this.y - this.height/2, this.width, this.height);
+                
+                ctx.fillStyle = this.lane === 0 ? 'rgba(0, 255, 255, 0.4)' : 'rgba(0, 255, 0, 0.4)';
+                ctx.fillRect(this.x - 6, this.y, 12, 60);
+            }
+        }
+        
+        function spawnWave() {
+            const difficulty = Math.min(gameTime / 20, 5);
+            
+            if (Math.random() < 0.2 + difficulty * 0.02) {
+                zombies.push(new Zombie(600, -150, true));
+                return;
+            }
+            
+            const numGroups = 3 + Math.floor(difficulty / 2);
+            const groupSize = 3;
+            const zombieSpacing = 48;
+            const groupPadding = 135;
+            const startY = CONFIG.INITIAL_SPAWN_Y;
+            
+            const groupWidth = groupSize * zombieSpacing;
+            const totalWidth = Math.min(numGroups * groupWidth + (numGroups - 1) * groupPadding, 
+                                        COMBAT_ZONE_END - COMBAT_ZONE_START - 60);
+            const startX = COMBAT_ZONE_START + (COMBAT_ZONE_END - COMBAT_ZONE_START - totalWidth) / 2;
+            
+            const numRows = 2 + Math.floor(difficulty / 3);
+            
+            for (let r = 0; r < numRows; r++) {
+                for (let g = 0; g < numGroups; g++) {
+                    const groupX = startX + g * (groupWidth + groupPadding);
+                    const groupY = startY - r * 240;
+                    
+                    for (let row = 0; row < groupSize; row++) {
+                        for (let col = 0; col < groupSize; col++) {
+                            const x = groupX + col * zombieSpacing;
+                            const y = groupY + row * zombieSpacing;
+                            
+                            if (x > COMBAT_ZONE_START && x < COMBAT_ZONE_END) {
+                                zombies.push(new Zombie(x, y, false));
+                            }
+                        }
+                    }
+                }
+            }
+            
+            if (Math.random() < CONFIG.GUN_PANEL_FREQUENCY) {
+                panels.push(new Panel(120, startY, 'gun'));
+            }
+            if (Math.random() < CONFIG.ARMY_PANEL_FREQUENCY) {
+                panels.push(new Panel(1080, startY, 'army'));
+            }
+        }
+        
+        function getShotPower() {
+            return CONFIG.BASE_KILLS_PER_SHOT * (player.gunLevel * CONFIG.GUN_POWER_MULTIPLIER);
+        }
+        
+        function gameOver() {
+            gameRunning = false;
+            document.getElementById('finalScore').textContent = player.score;
+            document.getElementById('gameOver').style.display = 'block';
+        }
+        
+        function update(deltaTime) {
+            if (!gameRunning) return;
+            
+            gameTime += deltaTime;
+            bgOffset += 90 * deltaTime;
+            if (bgOffset > 384) bgOffset -= 384;
+            
+            const targetX = LANES[player.lane];
+            player.x += (targetX - player.x) * 0.5;
+            
+            waveTimer += deltaTime;
+            if (waveTimer >= nextWaveTime) {
+                waveTimer = 0;
+                nextWaveTime = Math.max(0.8, 2 - gameTime / 20);
+                spawnWave();
+            }
+            
+            shootTimer += deltaTime;
+            if (shootTimer > CONFIG.FIRE_RATE) {
+                shootTimer = 0;
+                
+                if (player.lane === 1) {
+                    const livingZombies = zombies.filter(z => !z.dying);
+                    if (livingZombies.length > 0) {
+                        bullets.push(new CombatBullet(player.x, player.y - 90));
+                    }
+                } else {
+                    bullets.push(new PanelBullet(player.x, player.y - 90, player.lane));
+                }
+            }
+            
+            // Check zombie collision with army and player
+            zombies = zombies.filter(zombie => {
+                if (zombie.dying) return false;
+                zombie.update(deltaTime);
+                
+                // Check collision with army tanks first (positioned in front of main tank)
+                const armyY = player.y - 240;
+                const combatZoneWidth = COMBAT_ZONE_END - COMBAT_ZONE_START;
+                const tankSpacing = 36;
+                const tanksPerRow = Math.floor(combatZoneWidth / tankSpacing);
+                
+                // Check if zombie hits any army tank
+                if (player.armySize > 0 && zombie.y >= armyY - 150 && zombie.y <= armyY + 60) {
+                    // Check if zombie is within the army formation area
+                    if (zombie.x >= COMBAT_ZONE_START && zombie.x <= COMBAT_ZONE_END) {
+                        player.armySize--;
+                        for (let i = 0; i < 15; i++) {
+                            particles.push({
+                                x: zombie.x,
+                                y: zombie.y,
+                                vx: (Math.random() - 0.5) * 60,
+                                vy: (Math.random() - 0.5) * 60,
+                                life: 1,
+                                color: '#ff0000',
+                                size: 24
+                            });
+                        }
+                        playSound('explosion', 0.4);
+                        return false; // Remove both zombie and one army tank
+                    }
+                }
+                
+                // Check collision with main player tank
+                if (zombie.y > player.y - 90) {
+                    if (player.armySize > 0) {
+                        player.armySize--;
+                        for (let i = 0; i < 15; i++) {
+                            particles.push({
+                                x: zombie.x,
+                                y: player.y,
+                                vx: (Math.random() - 0.5) * 60,
+                                vy: (Math.random() - 0.5) * 60,
+                                life: 1,
+                                color: '#ff0000',
+                                size: 24
+                            });
+                        }
+                        playSound('explosion', 0.4);
+                        return false;
+                    } else {
+                        gameOver();
+                        return false;
+                    }
+                }
+                
+                return zombie.y < canvas.height + 150;
+            });
+            
+            panels = panels.filter(panel => {
+                if (panel.collected) return false;
+                panel.update(deltaTime);
+                return panel.y < canvas.height + 150;
+            });
+            
+            bullets = bullets.filter(bullet => !bullet.update(deltaTime));
+            
+            particles = particles.filter(particle => {
+                particle.x += particle.vx;
+                particle.y += particle.vy;
+                particle.vx *= 0.9;
+                particle.vy *= 0.9;
+                particle.life -= deltaTime * 3;
+                particle.size *= 0.95;
+                return particle.life > 0;
+            });
+            
+            explosions = explosions.filter(exp => {
+                exp.radius += 450 * deltaTime;
+                return exp.radius < exp.maxRadius;
+            });
+            
+            document.getElementById('armySize').textContent = player.armySize;
+            document.getElementById('gunLevel').textContent = player.gunLevel;
+            document.getElementById('shotPower').textContent = getShotPower();
+            document.getElementById('score').textContent = player.score;
+        }
+        
+        function draw() {
+            if (images.backgroundTile) {
+                if (!ctx.bgPattern) {
+                    ctx.bgPattern = ctx.createPattern(images.backgroundTile, 'repeat');
+                }
+                ctx.save();
+                ctx.fillStyle = ctx.bgPattern;
+                ctx.translate(0, bgOffset % 192);
+                ctx.fillRect(0, -192, canvas.width, canvas.height + 384);
+                ctx.restore();
+            } else {
+                const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+                gradient.addColorStop(0, '#001122');
+                gradient.addColorStop(0.5, '#003366');
+                gradient.addColorStop(1, '#004488');
+                ctx.fillStyle = gradient;
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+            }
+            
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+            ctx.lineWidth = 6;
+            ctx.setLineDash([30, 15]);
+            ctx.beginPath();
+            ctx.moveTo(240, 0);
+            ctx.lineTo(240, canvas.height);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(960, 0);
+            ctx.lineTo(960, canvas.height);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            
+            ctx.fillStyle = '#fff';
+            ctx.font = 'bold 36px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('GUN', 120, 90);
+            ctx.fillText('COMBAT', 600, 90);
+            ctx.fillText('ARMY', 1080, 90);
+            
+            if (player.lane === 0) {
+                ctx.fillStyle = 'rgba(0, 255, 255, 0.1)';
+                ctx.fillRect(0, 0, 240, canvas.height);
+            } else if (player.lane === 1) {
+                ctx.fillStyle = 'rgba(255, 0, 0, 0.1)';
+                ctx.fillRect(240, 0, 720, canvas.height);
+            } else {
+                ctx.fillStyle = 'rgba(0, 255, 0, 0.1)';
+                ctx.fillRect(960, 0, 240, canvas.height);
+            }
+            
+            explosions.forEach(exp => {
+                ctx.globalAlpha = 1 - (exp.radius / exp.maxRadius);
+                if (images.explosion) {
+                    ctx.drawImage(images.explosion, 
+                        exp.x - exp.radius, exp.y - exp.radius, 
+                        exp.radius * 2, exp.radius * 2);
+                } else {
+                    ctx.strokeStyle = exp.color;
+                    ctx.lineWidth = 9;
+                    ctx.beginPath();
+                    ctx.arc(exp.x, exp.y, exp.radius, 0, Math.PI * 2);
+                    ctx.stroke();
+                }
+            });
+            ctx.globalAlpha = 1;
+            
+            panels.forEach(panel => panel.draw());
+            zombies.forEach(zombie => zombie.draw());
+            bullets.forEach(bullet => bullet.draw());
+            
+            particles.forEach(particle => {
+                ctx.fillStyle = particle.color;
+                ctx.globalAlpha = particle.life;
+                ctx.fillRect(particle.x - particle.size/2, particle.y - particle.size/2, 
+                    particle.size, particle.size);
+            });
+            ctx.globalAlpha = 1;
+            
+            const tankLevel = Math.min(3, Math.ceil(player.gunLevel / 3));
+            
+            if (images['tank' + tankLevel]) {
+                ctx.save();
+                ctx.translate(player.x, player.y);
+                ctx.drawImage(images['tank' + tankLevel], -CONFIG.MAIN_TANK_SIZE/2, -CONFIG.MAIN_TANK_SIZE/2, CONFIG.MAIN_TANK_SIZE, CONFIG.MAIN_TANK_SIZE);
+                ctx.restore();
+            } else {
+                const evolveLevel = Math.min(10, player.gunLevel);
+                const tankHue = (evolveLevel - 1) * 36;
+                
+                ctx.save();
+                ctx.translate(player.x, player.y);
+                
+                const tankSize = 75 + evolveLevel * 6;
+                const tankGradient = ctx.createRadialGradient(0, 0, 0, 0, 0, tankSize);
+                tankGradient.addColorStop(0, 'hsl(' + tankHue + ', 100%, 60%)');
+                tankGradient.addColorStop(1, 'hsl(' + tankHue + ', 100%, 30%)');
+                ctx.fillStyle = tankGradient;
+                
+                ctx.beginPath();
+                if (evolveLevel <= 3) {
+                    ctx.rect(-tankSize, -tankSize, tankSize * 2, tankSize * 2);
+                } else if (evolveLevel <= 6) {
+                    for (let i = 0; i < 6; i++) {
+                        const angle = (Math.PI * 2 / 6) * i;
+                        const x = Math.cos(angle) * tankSize;
+                        const y = Math.sin(angle) * tankSize;
+                        if (i === 0) ctx.moveTo(x, y);
+                        else ctx.lineTo(x, y);
+                    }
+                } else {
+                    ctx.arc(0, 0, tankSize, 0, Math.PI * 2);
+                }
+                ctx.fill();
+                
+                ctx.fillStyle = '#333';
+                const cannonLength = 60 + evolveLevel * 9;
+                const cannonWidth = 12 + evolveLevel * 3;
+                ctx.fillRect(-cannonWidth/2, -cannonLength - tankSize, cannonWidth, cannonLength);
+                
+                ctx.restore();
+            }
+            
+            if (player.armySize > 0) {
+                const iconSize = CONFIG.ARMY_TANK_ICON_SIZE;
+                const armyY = player.y - 240; // Position tanks in front of main tank
+                
+                // Calculate how many tanks can fit per row in the combat zone
+                const combatZoneWidth = COMBAT_ZONE_END - COMBAT_ZONE_START;
+                const tankSpacing = iconSize; // Tanks touch each other - no gap
+                const tanksPerRow = Math.floor(combatZoneWidth / tankSpacing);
+                
+                let unitIndex = 0;
+                
+                for (let row = 0; unitIndex < player.armySize; row++) {
+                    const tanksInThisRow = Math.min(tanksPerRow, player.armySize - unitIndex);
+                    const rowWidth = (tanksInThisRow - 1) * tankSpacing;
+                    const startX = COMBAT_ZONE_START + (combatZoneWidth - rowWidth) / 2;
+                    
+                    for (let col = 0; col < tanksInThisRow; col++) {
+                        const x = startX + col * tankSpacing;
+                        // Reduce row spacing to eliminate any visual gap between tank rows
+                        const y = armyY - (row * (iconSize - 2)); // Overlap by 2 pixels to ensure no gap
+                        
+                        if (images.tankIcon) {
+                            ctx.drawImage(images.tankIcon, 
+                                x - iconSize/2, 
+                                y - iconSize/2, 
+                                iconSize, 
+                                iconSize);
+                        } else {
+                            ctx.fillStyle = '#4CAF50';
+                            ctx.fillRect(x - iconSize/2, y - iconSize/2, iconSize, iconSize);
+                            ctx.fillStyle = '#2E7D32';
+                            ctx.fillRect(x - iconSize/6, y - iconSize/2 - iconSize/3, iconSize/3, iconSize/2);
+                        }
+                        
+                        unitIndex++;
+                    }
+                }
+                
+                // Show total army count if there are many units
+                if (player.armySize > tanksPerRow * 3) {
+                    ctx.fillStyle = '#0f0';
+                    ctx.font = 'bold 36px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('Army: ' + player.armySize, player.x, armyY + 75);
+                }
+            }
+            
+            ctx.fillStyle = '#fff';
+            ctx.font = 'bold 36px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('PWR ' + player.gunLevel, player.x, player.y - 120);
+        }
+        
+        let lastTime = 0;
+        function gameLoop(currentTime) {
+            const deltaTime = Math.min((currentTime - lastTime) / 1000, 0.1);
+            lastTime = currentTime;
+            
+            update(deltaTime);
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+    </script>
+</body>
+</html>

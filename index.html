@@ -1,0 +1,1689 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>I Am Legend</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #000;
+            overflow: hidden;
+            font-family: 'Arial Black', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            padding: 0;
+        }
+
+        #gameCanvas {
+            max-height: 100vh;
+            max-width: 100vw;
+            border: none;
+            box-shadow: 0 0 50px rgba(0, 255, 255, 0.3);
+            margin: 0 auto;
+            display: block;
+        }
+
+        #ui {
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #2a2a2a;
+            text-align: center;
+            z-index: 10;
+            background: linear-gradient(180deg, #c4c4c4 0%, #a8a8a8 50%, #8c8c8c 100%);
+            border: 2px solid #ffffff;
+            border-bottom: 2px solid #606060;
+            border-right: 2px solid #606060;
+            padding: 6px 16px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            font-weight: bold;
+            image-rendering: pixelated;
+            min-width: 360px;
+            text-shadow: 1px 1px 0px rgba(255,255,255,0.5);
+        }
+
+        .stat {
+            display: inline-block;
+            margin: 0 8px;
+            font-size: 12px;
+            font-weight: bold;
+            text-shadow: 1px 1px 0px rgba(255,255,255,0.5);
+        }
+
+        .rampart { 
+            color: #2a5a2a; 
+            text-shadow: 1px 1px 0px rgba(255,255,255,0.5), 0 0 2px rgba(42,90,42,0.3);
+        }
+        .gun { 
+            color: #2a4a6a; 
+            text-shadow: 1px 1px 0px rgba(255,255,255,0.5), 0 0 2px rgba(42,74,106,0.3);
+        }
+        .power { 
+            color: #6a4a2a; 
+            text-shadow: 1px 1px 0px rgba(255,255,255,0.5), 0 0 2px rgba(106,74,42,0.3);
+        }
+        .score { 
+            color: #6a6a2a; 
+            text-shadow: 1px 1px 0px rgba(255,255,255,0.5), 0 0 2px rgba(106,106,42,0.3);
+        }
+
+        #startScreen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                radial-gradient(circle at center, #4a8c4a 0%, #3a7c3a  30%, #2a6c2a  60%, #1a5c1a 100%),
+                repeating-conic-gradient(from 0deg at 50% 50%, transparent 0deg, rgba(255,255,255,0.03) 1deg, transparent 2deg);
+            background-size: 100% 100%, 4px 4px;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            font-family: 'Courier New', monospace;
+            image-rendering: pixelated;
+        }
+
+        #startScreen::before {
+            content: '';
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            right: 20px;
+            bottom: 20px;
+            border: 8px solid #2d5a2d;
+            border-image: 
+                linear-gradient(45deg, 
+                    #6b9b6b 0%, #5a8a5a 25%, #4a7a4a 50%, #3a6a3a 75%, #2d5a2d 100%) 1;
+            pointer-events: none;
+        }
+
+        h1 {
+            color: #ffffff;
+            margin-bottom: 50px;
+            font-size: 48px;
+            font-weight: bold;
+            font-family: 'Courier New', monospace;
+            text-transform: uppercase;
+            letter-spacing: 4px;
+            text-shadow: 4px 4px 0px #2d5a2d, 2px 2px 0px #4a7a4a;
+            image-rendering: pixelated;
+        }
+
+        .menu-container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            align-items: center;
+        }
+
+        .menu-button {
+            width: 280px;
+            height: 60px;
+            background: linear-gradient(180deg, #c4c4c4 0%, #a8a8a8 50%, #8c8c8c 100%);
+            border: 4px solid #ffffff;
+            border-bottom: 4px solid #606060;
+            border-right: 4px solid #606060;
+            color: #2a2a2a;
+            font-family: 'Courier New', monospace;
+            font-size: 18px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            cursor: pointer;
+            position: relative;
+            transition: all 0.1s ease;
+            image-rendering: pixelated;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-shadow: 1px 1px 0px rgba(255,255,255,0.5);
+        }
+
+        .menu-button:hover {
+            background: linear-gradient(180deg, #d4d4d4 0%, #b8b8b8 50%, #9c9c9c 100%);
+            transform: translate(-1px, -1px);
+        }
+
+        .menu-button:active {
+            border-top: 4px solid #606060;
+            border-left: 4px solid #606060;
+            border-bottom: 4px solid #ffffff;
+            border-right: 4px solid #ffffff;
+            background: linear-gradient(180deg, #8c8c8c 0%, #a8a8a8 50%, #c4c4c4 100%);
+            transform: translate(1px, 1px);
+        }
+
+        .start-button {
+            background: linear-gradient(180deg, #6bb66b 0%, #5aa55a 50%, #4a944a 100%) !important;
+            border: 4px solid #7cc77c;
+            border-bottom: 4px solid #3a833a;
+            border-right: 4px solid #3a833a;
+            color: #ffffff !important;
+            text-shadow: 2px 2px 0px #2a6a2a !important;
+        }
+
+        .start-button:hover {
+            background: linear-gradient(180deg, #7cc77c 0%, #6bb66b 50%, #5aa55a 100%) !important;
+        }
+
+        .start-button:active {
+            border-top: 4px solid #3a833a;
+            border-left: 4px solid #3a833a;
+            border-bottom: 4px solid #7cc77c;
+            border-right: 4px solid #7cc77c;
+            background: linear-gradient(180deg, #4a944a 0%, #5aa55a 50%, #6bb66b 100%) !important;
+        }
+
+        .controls {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(45, 90, 45, 0.9);
+            border: 3px solid #6b9b6b;
+            padding: 20px 30px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            line-height: 1.6;
+            color: #ffffff;
+            text-shadow: 1px 1px 0px #2d5a2d;
+            max-width: 600px;
+            text-align: center;
+        }
+
+        .controls p {
+            margin: 8px 0;
+            font-weight: bold;
+        }
+
+        button {
+            all: unset;
+        }
+
+        @keyframes pixelPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+        }
+
+        .menu-button.start-button {
+            animation: pixelPulse 2s ease-in-out infinite;
+        }
+
+        #gameOver {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: linear-gradient(180deg, #c44444 0%, #a83838 50%, #8c2c2c 100%);
+            border: 4px solid #ffffff;
+            border-bottom: 4px solid #602020;
+            border-right: 4px solid #602020;
+            color: #ffffff;
+            padding: 30px 40px;
+            text-align: center;
+            z-index: 100;
+            display: none;
+            font-family: 'Courier New', monospace;
+            image-rendering: pixelated;
+            text-shadow: 2px 2px 0px #602020;
+        }
+
+        #gameOver h2 {
+            font-size: 24px;
+            margin: 0 0 15px 0;
+            font-family: 'Courier New', monospace;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+        }
+
+        #gameOver p {
+            font-size: 16px;
+            margin: 10px 0 20px 0;
+            font-family: 'Courier New', monospace;
+        }
+
+        #gameOver button {
+            background: linear-gradient(180deg, #a8a8a8 0%, #8c8c8c 50%, #707070 100%);
+            border: 3px solid #ffffff;
+            border-bottom: 3px solid #404040;
+            border-right: 3px solid #404040;
+            color: #ffffff;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            padding: 12px 25px;
+            cursor: pointer;
+            text-shadow: 1px 1px 0px #404040;
+            transition: all 0.1s ease;
+        }
+
+        #gameOver button:hover {
+            background: linear-gradient(180deg, #b8b8b8 0%, #9c9c9c 50%, #808080 100%);
+        }
+
+        #gameOver button:active {
+            border-top: 3px solid #404040;
+            border-left: 3px solid #404040;
+            border-bottom: 3px solid #ffffff;
+            border-right: 3px solid #ffffff;
+            background: linear-gradient(180deg, #707070 0%, #8c8c8c 50%, #a8a8a8 100%);
+        }
+
+        /* Notification system styles */
+        #notification {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: linear-gradient(180deg, #4a944a 0%, #3a833a 50%, #2a722a 100%);
+            border: 4px solid #ffffff;
+            border-bottom: 4px solid #1a4a1a;
+            border-right: 4px solid #1a4a1a;
+            color: #ffffff;
+            padding: 20px 30px;
+            text-align: center;
+            z-index: 150;
+            display: none;
+            font-family: 'Courier New', monospace;
+            font-size: 18px;
+            font-weight: bold;
+            text-shadow: 2px 2px 0px #1a4a1a;
+            min-width: 300px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas"></canvas>
+    
+    <div id="ui" style="display: none;">
+        <span class="stat rampart">Rampart: <span id="rampartSize">3</span></span>
+        <span class="stat gun">Gun: Lv<span id="gunLevel">1</span></span>
+        <span class="stat power">Power: <span id="shotPower">1</span></span>
+        <span class="stat score">Score: <span id="score">0</span></span>
+    </div>
+
+    <div id="notification"></div>
+
+    <div id="startScreen">
+        <h1>I AM LEGEND</h1>
+        <div class="menu-container">
+            <div class="menu-button start-button" onclick="startGame()">PLAY</div>
+            <div class="menu-button">PAUSE</div>
+            <div class="menu-button">OPTIONS</div>
+        </div>
+        <div class="controls">
+            <p>Arrow Keys or A/D to move between lanes</p>
+            <p>Middle: Auto-kills entire front row! • Left: Weapon upgrades • Right: Rampart upgrades</p>
+            <p>Don't let zombies touch you!</p>
+        </div>
+    </div>
+
+    <div id="gameOver">
+        <h2>GAME OVER</h2>
+        <p>Final Score: <span id="finalScore">0</span></p>
+        <button onclick="location.reload()">TRY AGAIN</button>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        canvas.width = 1200;
+        canvas.height = 1800;
+        
+        // Game Configuration
+        const CONFIG = {
+            DIFFICULTY: 'medium',
+            ZOMBIES_PER_GROUP: 9,
+            GROUPS_PER_WAVE: 3,
+            BASE_KILLS_PER_SHOT: 3,
+            RAMPART_KILL_MULTIPLIER: 0,
+            GUN_DAMAGE_PER_LEVEL: 1,
+            GUN_POWER_MULTIPLIER: 1,
+            ZOMBIE_SPEED: 150,
+            INITIAL_SPAWN_Y: -150,
+            WAVE_SPAWN_TIME: 1.5,
+            GUN_UPGRADE_TIME: 1.0,
+            RAMPART_UPGRADE_TIME: 0.8,
+            GUN_PANEL_FREQUENCY: 0.5,
+            RAMPART_PANEL_FREQUENCY: 0.8,
+            FIRE_RATE: 0.25,
+            BULLET_SPEED: 1200,
+            INITIAL_RAMPART_SIZE: 3,
+            ZOMBIE_NORMAL_SIZE: 48,
+            ZOMBIE_BOSS_SIZE: 120,
+            PANEL_SIZE: 120,
+            RAMPART_TANK_ICON_SIZE: 86,
+            MAIN_TANK_SIZE: 180,
+            BULLET_SIZE: 24,
+            TANK_ROW_SPACING: 34,
+            PLAYER_SCALE: 0.15,
+            WEAPON_SCALE: 0.6,
+            HAND_SCALE: 0.8,
+            HAND2_SCALE: 0.8,
+            MUZZLE_SCALE: 0.7,
+            LANE_MOVE_SPEED: 0.15,
+            MIDDLE_LANE_WALK_SPEED: 100,
+            MIDDLE_LANE_WALK_DISTANCE: 150,
+            PLAYER_ANIMATION_SPEED: 8,
+            NUMBER_OF_STEPS: 3,
+            PLAYER_SPEED: 100,
+            WEAPON_X_OFFSET: 0,
+            WEAPON_Y_OFFSET: 0.3,
+            BULLET_X_OFFSET: 6,
+            BULLET_Y_OFFSET: 80,
+            MUZZLE_X_OFFSET: 0.2,
+            MUZZLE_Y_OFFSET: -0.25,
+            HAND_X_OFFSET_RIGHT: 65,
+            HAND_X_OFFSET_LEFT: 55,
+            HAND_Y_OFFSET: 0.15,
+            HAND2_X_OFFSET_RIGHT: -25,
+            HAND2_X_OFFSET_LEFT: -15,
+            HAND2_Y_OFFSET: 0.09,
+            GUN_ANGLE_RIGHT: 90,
+            GUN_ANGLE_LEFT: 80,
+            BULLET_MOVEMENT_ANGLE: 360,
+            BULLET_COUNT: 3,
+            BULLET_SPREAD_ANGLE: 12,
+            ROCK_COUNT: 15,
+            GROUND_COUNT: 5,
+            BACKGROUND_COLOR: '#555',
+            GROUND_SCALE: 0.1,
+            ROCK_SCALE: 0.01,
+            ENEMY_SCALE: 0.08,
+            BOSS_SCALE: 0.3,
+            ENEMY_ANIMATION_SPEED: 8,
+            WEAPON_R2_AVAILABLE: true,
+            WEAPON_R3_AVAILABLE: true,
+            MUZZLE_DURATION: 0.12,
+            DEATH_ANIMATION_SPEED: 8,
+            BOSS_SPAWN_DELAY: 10,
+            BOSS_SPAWN_STRENGTH_THRESHOLD: 10,
+            BOSS_SPAWN_BOOST: 0.1,
+            BOSS_HEALTH_MULTIPLIER: 1.5,
+            MAX_BULLET_SIZE_MULTIPLIER: 3,
+            FIRING_SOUND_DELAY: 1.0,
+            EXPLOSION_SOUND_DELAY: 0.5,
+            FIRING_SOUND_DURATION: 2.0,
+            EXPLOSION_SOUND_DURATION: 6.0,
+            RAMPART_BLOCKS_PER_ZOMBIE: 3
+        };
+        
+        // Adjust parameters based on difficulty
+        if (CONFIG.DIFFICULTY === 'easy') {
+            CONFIG.ZOMBIE_SPEED = 100;
+            CONFIG.WAVE_SPAWN_TIME = 2.0;
+            CONFIG.GUN_PANEL_FREQUENCY = 0.8;
+            CONFIG.RAMPART_PANEL_FREQUENCY = 0.6;
+            CONFIG.BOSS_SPAWN_DELAY = 60;
+        } else if (CONFIG.DIFFICULTY === 'hard') {
+            CONFIG.ZOMBIE_SPEED = 200;
+            CONFIG.WAVE_SPAWN_TIME = 1.0;
+            CONFIG.GUN_PANEL_FREQUENCY = 0.6;
+            CONFIG.RAMPART_PANEL_FREQUENCY = 0.6;
+            CONFIG.BOSS_SPAWN_DELAY = 15;
+        }
+        
+        // Image loading system
+        const images = {};
+        let imagesLoaded = 0;
+        let totalImages = 0;
+        
+        // Audio loading system
+        const sounds = {};
+        let soundsLoaded = 0;
+        let totalSounds = 0;
+        let firstMiddleShot = true;
+        
+        function loadImage(name, url) {
+            totalImages++;
+            const img = new Image();
+            img.onload = () => {
+                images[name] = img;
+                imagesLoaded++;
+                console.log('Loaded:', name);
+            };
+            img.onerror = () => {
+                console.warn('Failed to load:', name, 'from', url);
+                images[name] = null;
+                imagesLoaded++;
+            };
+            img.src = url;
+        }
+        
+        function loadSound(name, url) {
+            totalSounds++;
+            const audio = new Audio();
+            audio.addEventListener('canplaythrough', () => {
+                sounds[name] = audio;
+                soundsLoaded++;
+                console.log('Sound loaded:', name);
+            });
+            audio.addEventListener('error', () => {
+                console.warn('Failed to load sound:', name, 'from', url);
+                sounds[name] = null;
+                soundsLoaded++;
+            });
+            audio.src = url;
+        }
+        
+        function playSound(name) {
+            if (sounds[name]) {
+                const audioToPlay = sounds[name].cloneNode();
+                const maxDuration = name === 'firing' || name === 'firing2' ? 
+                    CONFIG.FIRING_SOUND_DURATION : CONFIG.EXPLOSION_SOUND_DURATION;
+                
+                audioToPlay.play().catch(() => {});
+                
+                setTimeout(() => {
+                    if (!audioToPlay.paused) {
+                        audioToPlay.pause();
+                        audioToPlay.currentTime = 0;
+                    }
+                }, maxDuration * 1000);
+            }
+        }
+        
+        // Load sprites
+        const SPRITE_BASE_PATH = 'Free 2D Animated Vector Game Character Sprites/Full body animated characters/Char 1/no hands';
+        const HAND_PATH = 'Free 2D Animated Vector Game Character Sprites/Animated body parts/Right hands/handR1';
+        const WEAPON_PATH = 'Free 2D Animated Vector Game Character Sprites/Weapons';
+        const ENEMY_PATHS = {
+            enemy1: 'Free 2D Animated Vector Game Character Sprites/Full body animated characters/Enemies/Enemy 1',
+            enemy2: 'Free 2D Animated Vector Game Character Sprites/Full body animated characters/Enemies/Enemy 2',
+            enemy3: 'Free 2D Animated Vector Game Character Sprites/Full body animated characters/Enemies/Enemy 3',
+            enemy4: 'Free 2D Animated Vector Game Character Sprites/Full body animated characters/Enemies/Enemy 4'
+        };
+        const ENVIRONMENT_PATH = 'Free 2D Animated Vector Game Character Sprites/Environment';
+        const DEATH_PATH = 'Free 2D Animated Vector Game Character Sprites/Generic death animation';
+        const GROUND_PATHS = [
+            `${ENVIRONMENT_PATH}/ground3_white.png`,
+            `${ENVIRONMENT_PATH}/ground3_white.png`,
+            `${ENVIRONMENT_PATH}/ground3_white.png`
+        ];
+        const ROCK_PATHS = [
+            `${ENVIRONMENT_PATH}/rock1.png`,
+            `${ENVIRONMENT_PATH}/rock2.png`,
+            `${ENVIRONMENT_PATH}/rock3.png`
+        ];
+        
+        // Load walking animation frames
+        for (let i = 0; i < 8; i++) {
+            loadImage(`walk${i}`, `${SPRITE_BASE_PATH}/walk_${i}.png`);
+            loadImage(`handWalk${i}`, `${HAND_PATH}/walk_${i}.png`);
+        }
+        
+        // Load enemy sprites
+        for (let enemyType in ENEMY_PATHS) {
+            const maxFrames = enemyType === 'enemy3' ? 6 : 8;
+            const prefix = enemyType === 'enemy3' ? 'fly' : 'walk';
+            for (let i = 0; i < maxFrames; i++) {
+                loadImage(`${enemyType}${prefix}${i}`, `${ENEMY_PATHS[enemyType]}/${prefix}_${i}.png`);
+            }
+        }
+        
+        // Load background images
+        GROUND_PATHS.forEach((path, index) => loadImage(`ground${index}`, path));
+        ROCK_PATHS.forEach((path, index) => loadImage(`rock${index}`, path));
+        
+        // Load weapons and power icon
+        loadImage('weaponR1', `${WEAPON_PATH}/weaponR1.png`);
+        loadImage('weaponR2', `${WEAPON_PATH}/weaponR2.png`);
+        loadImage('weaponR3', `${WEAPON_PATH}/weaponR3.png`);
+        loadImage('weaponPower', `${WEAPON_PATH}/weapon_Power.png`);
+        loadImage('muzzle', 'Free 2D Animated Vector Game Character Sprites/Extras/muzzle.png');
+        
+        // Load death animation
+        for (let i = 0; i < 3; i++) {
+            loadImage(`death${i}`, `${DEATH_PATH}/death_${i}.png`);
+        }
+        
+        // Load other sprites
+        loadImage('tankIcon', 'assets/tank_icon.png');
+        loadImage('explosion', 'assets/explosion.png');
+        loadImage('bullet', 'Free 2D Animated Vector Game Character Sprites/Extras/bullet.png');
+        
+        // Load sounds - Updated to use new explosion sounds
+        loadSound('explosion1', 'assets/explosion_1.mp3');
+        loadSound('explosion2', 'assets/explosion_2.mp3');
+        loadSound('firing', 'assets/firing.wav');
+        loadSound('firing2', 'assets/firing2.wav');
+        
+        // Game state
+        let gameRunning = false;
+        let gameTime = 0;
+        let shootTimer = 0;
+        let bgOffset = 0;
+        let waveTimer = 0;
+        let nextWaveTime = 1;
+        let firingSoundTimer = 0;
+        let explosionSoundTimer = 0;
+        let lastBossSpawnTime = -100;
+        
+        // Player with soldier animation properties
+        const player = {
+            lane: 1,
+            x: 600,
+            y: 1700,
+            rampartSize: 3,
+            gunLevel: 1,
+            score: 0,
+            frame: 0,
+            frameTime: 0,
+            direction: 1,
+            stepCount: 0,
+            maxSteps: 3,
+            walkingDirection: 1,
+            baseX: 600,
+            weaponType: 'R1',
+            bulletsPerShot: 1,
+            muzzleFlash: false,
+            muzzleTimer: 0
+        };
+        
+        // Game entities
+        let zombies = [];
+        let panels = [];
+        let bullets = [];
+        let particles = [];
+        let explosions = [];
+        let rampartDestructions = [];
+        const grounds = [];
+        const rocks = [];
+        
+        // Lane positions
+        const LANES = [120, 600, 1080];
+        const COMBAT_ZONE_START = 240;
+        const COMBAT_ZONE_END = 960;
+        
+        // Notification system
+        function showNotification(message, duration = 2000) {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.style.display = 'block';
+            
+            setTimeout(() => {
+                notification.style.display = 'none';
+            }, duration);
+        }
+        
+        // Initialize background
+        function initializeBackground() {
+            for (let i = 0; i < CONFIG.GROUND_COUNT; i++) {
+                const groundIndex = Math.floor(Math.random() * GROUND_PATHS.length);
+                grounds.push({
+                    x: Math.random() * (canvas.width - 100) + 50,
+                    y: Math.random() * (canvas.height - 100),
+                    type: groundIndex,
+                });
+            }
+        }
+        function initializeRocks() {
+            for (let i = 0; i < CONFIG.ROCK_COUNT; i++) {
+                rocks.push({
+                    x: Math.random() * (canvas.width - 50) + 25,
+                    y: Math.random() * canvas.height,
+                    type: Math.floor(Math.random() * 3),
+                });
+            }
+        }
+        
+        // Controls
+        document.addEventListener('keydown', e => {
+            if (e.key.toLowerCase() === 'a' || e.key === 'ArrowLeft') {
+                player.lane = Math.max(0, player.lane - 1);
+                player.direction = -1;
+            }
+            if (e.key.toLowerCase() === 'd' || e.key === 'ArrowRight') {
+                player.lane = Math.min(2, player.lane + 1);
+                player.direction = 1;
+            }
+        });
+        
+        // Zombie class
+        class Zombie {
+            constructor(x, y, isBoss = false) {
+                this.x = x;
+                this.y = y;
+                this.isBoss = isBoss;
+                this.width = isBoss ? CONFIG.ZOMBIE_BOSS_SIZE : CONFIG.ZOMBIE_NORMAL_SIZE;
+                this.height = isBoss ? CONFIG.ZOMBIE_BOSS_SIZE : CONFIG.ZOMBIE_NORMAL_SIZE;
+                
+                if (isBoss) {
+                    const baseHealth = 50;
+                    const powerScaling = player.gunLevel * 15;
+                    const timeScaling = Math.floor(gameTime / 30) * 10;
+                    this.maxHealth = baseHealth + powerScaling + timeScaling;
+                } else {
+                    this.maxHealth = 1;
+                }
+                
+                this.health = this.maxHealth;
+                this.color = isBoss ? '#ff00ff' : '#cc0000';
+                this.dying = false;
+                this.hitFlash = 0;
+                this.type = isBoss ? 'enemy3' : ['enemy1', 'enemy2', 'enemy4'][Math.floor(Math.random() * 3)];
+                this.frame = 0;
+                this.frameTime = 0;
+                this.walkAnim = Array.from({ length: this.type === 'enemy3' ? 6 : 8 }, 
+                    (_, i) => `${this.type}${this.type === 'enemy3' ? 'fly' : 'walk'}${i}`);
+                this.scale = isBoss ? CONFIG.BOSS_SCALE : CONFIG.ENEMY_SCALE;
+            }
+            
+            update(deltaTime) {
+                if (!this.dying) {
+                    this.y += CONFIG.ZOMBIE_SPEED * deltaTime;
+                    this.frameTime += deltaTime * CONFIG.ENEMY_ANIMATION_SPEED;
+                    if (this.frameTime >= 1) {
+                        this.frame = (this.frame + 1) % this.walkAnim.length;
+                        this.frameTime = 0;
+                    }
+                }
+                if (this.hitFlash > 0) {
+                    this.hitFlash -= deltaTime;
+                }
+            }
+            
+            hit(damage = 1) {
+                this.health -= damage;
+                this.hitFlash = 0.2;
+                
+                if (this.health <= 0) {
+                    this.dying = true;
+                    player.score += this.isBoss ? 500 : 20;
+                    
+                    if (this.isBoss) {
+                        for (let i = 0; i < 30; i++) {
+                            particles.push({
+                                x: this.x,
+                                y: this.y,
+                                vx: (Math.random() - 0.5) * 90,
+                                vy: (Math.random() - 0.5) * 90,
+                                life: 1.5,
+                                color: ['#ff00ff', '#ff0000', '#ffaa00'][i % 3],
+                                size: 30
+                            });
+                        }
+                    }
+                    return true;
+                }
+                return false;
+            }
+            
+            draw() {
+                if (this.dying) return;
+                
+                const frameImg = images[this.walkAnim[this.frame]];
+                if (frameImg && frameImg.complete) {
+                    ctx.save();
+                    if (this.hitFlash > 0) {
+                        ctx.filter = 'brightness(2)';
+                    }
+                    const width = frameImg.width * this.scale;
+                    const height = frameImg.height * this.scale;
+                    ctx.translate(this.x, this.y);
+                    ctx.drawImage(frameImg, -width / 2, -height, width, height);
+                    ctx.restore();
+                } else {
+                    ctx.fillStyle = this.hitFlash > 0 ? '#ffffff' : this.color;
+                    ctx.fillRect(this.x - this.width/2, this.y - this.height/2, this.width, this.height);
+                    
+                    if (!this.isBoss) {
+                        ctx.fillStyle = '#ffff00';
+                        ctx.fillRect(this.x - 15, this.y - 9, 9, 9);
+                        ctx.fillRect(this.x + 6, this.y - 9, 9, 9);
+                    }
+                }
+                
+                if (this.isBoss) {
+                    const barWidth = 150;
+                    const barHeight = 24;
+                    const barY = this.y - this.height/2 - 45;
+                    
+                    ctx.fillStyle = 'rgba(0,0,0,0.8)';
+                    ctx.fillRect(this.x - barWidth/2, barY, barWidth, barHeight);
+                    
+                    const healthPercent = this.health / this.maxHealth;
+                    ctx.fillStyle = healthPercent > 0.5 ? '#00ff00' : healthPercent > 0.25 ? '#ffff00' : '#ff0000';
+                    ctx.fillRect(this.x - barWidth/2, barY, barWidth * healthPercent, barHeight);
+                    
+                    ctx.strokeStyle = '#fff';
+                    ctx.lineWidth = 6;
+                    ctx.strokeRect(this.x - barWidth/2, barY, barWidth, barHeight);
+                    
+                    ctx.fillStyle = '#fff';
+                    ctx.font = 'bold 14px Courier New';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(`${this.health}/${this.maxHealth}`, this.x, barY - 9);
+                }
+            }
+        }
+        
+        // Rampart destruction animation
+        class RampartDestruction {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.frame = 0;
+                this.frameTime = 0;
+                this.animFrames = ['death0', 'death1', 'death2'];
+                this.scale = CONFIG.RAMPART_TANK_ICON_SIZE / 100;
+            }
+            
+            update(deltaTime) {
+                this.frameTime += deltaTime * CONFIG.DEATH_ANIMATION_SPEED;
+                if (this.frameTime >= 1) {
+                    this.frame = (this.frame + 1);
+                    this.frameTime = 0;
+                }
+                return this.frame < this.animFrames.length;
+            }
+            
+            draw() {
+                const frameImg = images[this.animFrames[this.frame]];
+                if (frameImg && frameImg.complete) {
+                    const width = frameImg.width * this.scale;
+                    const height = frameImg.height * this.scale;
+                    ctx.save();
+                    ctx.translate(this.x, this.y);
+                    ctx.drawImage(frameImg, -width / 2, -height / 2, width, height);
+                    ctx.restore();
+                }
+            }
+        }
+        
+        // Panel class
+        class Panel {
+            constructor(x, y, type) {
+                this.x = x;
+                this.y = y;
+                this.width = CONFIG.PANEL_SIZE;
+                this.height = CONFIG.PANEL_SIZE;
+                this.type = type;
+                this.color = this.type === 'rampart' ? '#4CAF50' : '#2196F3';
+                this.value = this.type === 'rampart' ? 1 : 
+                            this.type === 'weaponR2' ? 'R2' : 
+                            this.type === 'weaponR3' ? 'R3' : 1;
+                this.maxProgress = this.type === 'rampart' ? 0.8 : 1.2;
+                this.progress = 0;
+                this.collected = false;
+            }
+            
+            update(deltaTime) {
+                this.y += CONFIG.ZOMBIE_SPEED * deltaTime;
+            }
+            
+            hit() {
+                if (this.collected) return false;
+                
+                this.progress += 0.35;
+                
+                for (let i = 0; i < 3; i++) {
+                    particles.push({
+                        x: this.x + (Math.random() - 0.5) * 60,
+                        y: this.y + (Math.random() - 0.5) * 60,
+                        vx: (Math.random() - 0.5) * 24,
+                        vy: -Math.random() * 24,
+                        life: 0.5,
+                        color: this.color,
+                        size: 12
+                    });
+                }
+                
+                if (this.progress >= this.maxProgress) {
+                    this.collected = true;
+                    
+                    if (this.type === 'rampart') {
+                        player.rampartSize = Math.min(player.rampartSize + this.value, 50);
+                        player.score += this.value * 50;
+                        showNotification(`RAMPART +${this.value}!`);
+                    } else if (this.type === 'weaponPower') {
+                        player.gunLevel = player.gunLevel + 1;
+                        if (player.gunLevel <= 3) {
+                            player.weaponType = 'R1';
+                            player.bulletsPerShot = 1;
+                        } else if (player.gunLevel <= 6 && CONFIG.WEAPON_R2_AVAILABLE) {
+                            player.weaponType = 'R2';
+                            player.bulletsPerShot = 2;
+                            CONFIG.WEAPON_R2_AVAILABLE = false;
+                        } else if (player.gunLevel > 6 && CONFIG.WEAPON_R3_AVAILABLE) {
+                            player.weaponType = 'R3';
+                            player.bulletsPerShot = 3;
+                            CONFIG.WEAPON_R3_AVAILABLE = false;
+                        }
+                        player.score += 200;
+                        showNotification(`POWER LEVEL UP! LV${player.gunLevel}`);
+                    } else if (this.type === 'weaponR2' && CONFIG.WEAPON_R2_AVAILABLE && player.gunLevel >= 3) {
+                        player.weaponType = 'R2';
+                        player.bulletsPerShot = 2;
+                        player.gunLevel = Math.max(player.gunLevel, 4);
+                        CONFIG.WEAPON_R2_AVAILABLE = false;
+                        player.score += 300;
+                        showNotification('WEAPON R2 UNLOCKED!');
+                    } else if (this.type === 'weaponR3' && CONFIG.WEAPON_R3_AVAILABLE && player.weaponType === 'R2' && player.gunLevel >= 6) {
+                        player.weaponType = 'R3';
+                        player.bulletsPerShot = 3;
+                        player.gunLevel = Math.max(player.gunLevel, 7);
+                        CONFIG.WEAPON_R3_AVAILABLE = false;
+                        player.score += 400;
+                        showNotification('WEAPON R3 UNLOCKED!');
+                    }
+                    
+                    explosions.push({
+                        x: this.x,
+                        y: this.y,
+                        radius: 0,
+                        maxRadius: 150,
+                        color: this.color
+                    });
+                    
+                    return true;
+                }
+                
+                return false;
+            }
+            
+            draw() {
+                if (this.collected) return;
+                
+                if (this.type === 'rampart' && images.tankIcon) {
+                    ctx.drawImage(images.tankIcon, 
+                        this.x - this.width/2, this.y - this.height/2, 
+                        this.width, this.height);
+                } else if (this.type === 'weaponPower' && images.weaponPower) {
+                    ctx.drawImage(images.weaponPower, 
+                        this.x - this.width/2, this.y - this.height/2, 
+                        this.width, this.height);
+                } else if (this.type === 'weaponR2' && images.weaponR2) {
+                    ctx.drawImage(images.weaponR2, 
+                        this.x - this.width/2, this.y - this.height/2, 
+                        this.width, this.height);
+                } else if (this.type === 'weaponR3' && images.weaponR3) {
+                    ctx.drawImage(images.weaponR3, 
+                        this.x - this.width/2, this.y - this.height/2, 
+                        this.width, this.height);
+                } else {
+                    const gradient = ctx.createLinearGradient(
+                        this.x - this.width/2, this.y - this.height/2,
+                        this.x + this.width/2, this.y + this.height/2
+                    );
+                    gradient.addColorStop(0, this.type === 'rampart' ? '#4CAF50' : '#2196F3');
+                    gradient.addColorStop(1, this.type === 'rampart' ? '#2E7D32' : '#1565C0');
+                    ctx.fillStyle = gradient;
+                    ctx.fillRect(this.x - this.width/2, this.y - this.height/2, this.width, this.height);
+                    
+                    ctx.fillStyle = '#fff';
+                    ctx.font = 'bold 20px Courier New';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(this.type === 'rampart' ? 'RAMPART' : 
+                                this.type === 'weaponPower' ? 'POWER' : 
+                                this.type === 'weaponR2' ? 'R2' : 'R3', this.x, this.y + 5);
+                }
+                
+                const barWidth = 135;
+                const barHeight = 24;
+                const barY = this.y - this.height/2 - 45;
+                
+                ctx.fillStyle = 'rgba(0,0,0,0.8)';
+                ctx.fillRect(this.x - barWidth/2, barY, barWidth, barHeight);
+                
+                const fillWidth = (this.progress / this.maxProgress) * barWidth;
+                ctx.fillStyle = '#ffff00';
+                ctx.fillRect(this.x - barWidth/2, barY, fillWidth, barHeight);
+                
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 3;
+                ctx.strokeRect(this.x - barWidth/2, barY, barWidth, barHeight);
+                
+                ctx.fillStyle = 'white';
+                ctx.font = 'bold 14px Courier New';
+                ctx.textAlign = 'center';
+                ctx.fillText(this.type === 'rampart' ? '+1' : 
+                            this.type === 'weaponPower' ? 'POWER+1' : 
+                            this.type === 'weaponR2' ? 'R2' : 'R3', this.x, this.y - this.height/2 - 45);
+            }
+        }
+        
+        // Bullet classes
+        class CombatBullet {
+            constructor(x, y, angle = CONFIG.BULLET_MOVEMENT_ANGLE) {
+                this.x = x;
+                this.y = y;
+                this.speed = CONFIG.BULLET_SPEED;
+                this.width = CONFIG.BULLET_SIZE;
+                this.height = CONFIG.BULLET_SIZE * 1.5;
+                this.angle = angle;
+                this.speedX = CONFIG.BULLET_SPEED * Math.sin((angle % 360) * Math.PI / 180);
+                this.speedY = -CONFIG.BULLET_SPEED * Math.cos((angle % 360) * Math.PI / 180);
+            }
+            
+            update(deltaTime) {
+                this.x += this.speedX * deltaTime;
+                this.y += this.speedY * deltaTime;
+                
+                const sortedZombies = zombies
+                    .filter(z => !z.dying)
+                    .sort((a, b) => b.y - a.y);
+                
+                const killCount = getShotPower();
+                
+                for (let i = 0; i < sortedZombies.length; i++) {
+                    const zombie = sortedZombies[i];
+                    const dx = Math.abs(this.x - zombie.x);
+                    const dy = Math.abs(this.y - zombie.y);
+                    
+                    if (dy < zombie.height + this.height && dx < (COMBAT_ZONE_END - COMBAT_ZONE_START) / 2) {
+                        const hitY = zombie.y;
+                        const rowZombies = sortedZombies.filter(z => 
+                            Math.abs(z.y - hitY) < 120 && 
+                            z.x >= COMBAT_ZONE_START && z.x <= COMBAT_ZONE_END
+                        );
+                        
+                        const toKill = rowZombies
+                            .sort((a, b) => a.x - b.x)
+                            .slice(0, Math.min(killCount, rowZombies.length));
+                        
+                        this.explodeAndKill(toKill, hitY);
+                        return true;
+                    }
+                }
+                
+                return this.y < -90;
+            }
+            
+            explodeAndKill(targets, yPos) {
+                if (explosionSoundTimer >= CONFIG.EXPLOSION_SOUND_DELAY) {
+                    if (firstMiddleShot) {
+                        playSound('explosion1');
+                        firstMiddleShot = false;
+                    } else {
+                        playSound('explosion2');
+                    }
+                    explosionSoundTimer = 0;
+                }
+                
+                explosions.push({
+                    x: this.x,
+                    y: yPos,
+                    radius: 0,
+                    maxRadius: 90,
+                    color: '#ffff00'
+                });
+                
+                targets.forEach(zombie => {
+                    const damage = player.gunLevel * CONFIG.GUN_DAMAGE_PER_LEVEL;
+                    const isDead = zombie.hit(damage);
+                    
+                    if (isDead) {
+                        for (let i = 0; i < 10; i++) {
+                            particles.push({
+                                x: zombie.x,
+                                y: zombie.y,
+                                vx: (Math.random() - 0.5) * 45,
+                                vy: (Math.random() - 0.5) * 45,
+                                life: 0.8,
+                                color: zombie.isBoss ? '#ff00ff' : '#ff0000',
+                                size: 15
+                            });
+                        }
+                    }
+                });
+            }
+            
+            draw() {
+                const sizeMultiplier = Math.min(1 + (player.gunLevel - 1) * 0.5, CONFIG.MAX_BULLET_SIZE_MULTIPLIER);
+                const bulletSize = this.width * sizeMultiplier;
+                const bulletHeight = this.height * sizeMultiplier;
+                
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.rotate(-Math.PI / 2 + ((this.angle % 360) - 90) * Math.PI / 180);
+                
+                if (images.bullet && images.bullet.complete) {
+                    ctx.drawImage(images.bullet, -bulletSize/2, -bulletHeight/2, bulletSize, bulletHeight);
+                } else {
+                    const bulletLevel = Math.min(3, Math.ceil(player.gunLevel / 3));
+                    
+                    if (bulletLevel === 1) {
+                        ctx.fillStyle = '#ffff00';
+                        ctx.fillRect(-bulletSize/2, -bulletHeight/2, bulletSize, bulletHeight);
+                    } else if (bulletLevel === 2) {
+                        const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, bulletSize);
+                        gradient.addColorStop(0, '#ffffff');
+                        gradient.addColorStop(0.5, '#ff8800');
+                        gradient.addColorStop(1, '#ff4400');
+                        ctx.fillStyle = gradient;
+                        ctx.fillRect(-bulletSize/2, -bulletHeight/2, bulletSize, bulletHeight);
+                    } else {
+                        const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, bulletSize * 1.5);
+                        gradient.addColorStop(0, '#ffffff');
+                        gradient.addColorStop(0.3, '#ff00ff');
+                        gradient.addColorStop(0.6, '#8800ff');
+                        gradient.addColorStop(1, 'transparent');
+                        ctx.fillStyle = gradient;
+                        ctx.beginPath();
+                        ctx.arc(0, 0, bulletSize, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                }
+                
+                if (player.gunLevel > 3) {
+                    ctx.globalAlpha = 0.3;
+                    ctx.fillStyle = player.gunLevel > 6 ? 'rgba(255, 0, 255, 0.8)' : 'rgba(255, 136, 0, 0.6)';
+                    ctx.fillRect(-6, 0, 12, 60 + Math.min(player.gunLevel, 10) * 15);
+                    ctx.globalAlpha = 1;
+                }
+                
+                ctx.restore();
+            }
+        }
+        
+        class PanelBullet {
+            constructor(x, y, lane) {
+                this.x = x;
+                this.y = y;
+                this.lane = lane;
+                this.speed = CONFIG.BULLET_SPEED;
+                this.width = CONFIG.BULLET_SIZE;
+                this.height = CONFIG.BULLET_SIZE * 1.5;
+            }
+            
+            update(deltaTime) {
+                this.y -= this.speed * deltaTime;
+                
+                const targetType = this.lane === 0 ? ['weaponPower', 'weaponR2', 'weaponR3'] : ['rampart'];
+                for (let panel of panels) {
+                    if (targetType.includes(panel.type) && !panel.collected) {
+                        const dx = Math.abs(this.x - panel.x);
+                        const dy = Math.abs(this.y - panel.y);
+                        
+                        if (dx < 90 && dy < 90) {
+                            if (panel.hit()) {
+                                panels = panels.filter(p => p !== panel);
+                            }
+                            return true;
+                        }
+                    }
+                }
+                
+                return this.y < -30;
+            }
+            
+            draw() {
+                const bulletSize = this.width * 0.8;
+                const bulletHeight = this.height * 0.8;
+                
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.rotate(-Math.PI / 2);
+                
+                if (images.bullet && images.bullet.complete) {
+                    if (this.lane === 0) {
+                        ctx.filter = 'hue-rotate(180deg) saturate(1.5)';
+                    } else {
+                        ctx.filter = 'hue-rotate(90deg) saturate(1.5)';
+                    }
+                    ctx.drawImage(images.bullet, -bulletSize/2, -bulletHeight/2, bulletSize, bulletHeight);
+                } else {
+                    ctx.fillStyle = this.lane === 0 ? '#00ffff' : '#00ff00';
+                    ctx.fillRect(-bulletSize/2, -bulletHeight/2, bulletSize, bulletHeight);
+                    
+                    ctx.fillStyle = this.lane === 0 ? 'rgba(0, 255, 255, 0.4)' : 'rgba(0, 255, 0, 0.4)';
+                    ctx.fillRect(-6, 0, 12, 60);
+                }
+                
+                ctx.restore();
+            }
+        }
+        
+        function getFiringSoundName() {
+            if (player.weaponType === 'R3' || player.gunLevel >= 7) {
+                return 'firing2';
+            } else if (player.weaponType === 'R2' || player.gunLevel >= 4) {
+                return 'firing2';
+            } else {
+                return 'firing';
+            }
+        }
+        
+        function spawnWave() {
+            const difficulty = Math.min(gameTime / 20, 5);
+            
+            const playerStrength = player.gunLevel + player.rampartSize / 5;
+            
+            const timeSinceLastBoss = gameTime - lastBossSpawnTime;
+            const bossWaveClearTime = 2;
+            
+            const bossProb = 0.4 + difficulty * 0.05;
+            if (gameTime > CONFIG.BOSS_SPAWN_DELAY && 
+                timeSinceLastBoss > bossWaveClearTime && 
+                Math.random() < bossProb) {
+                
+                const clearRadius = 300;
+                zombies = zombies.filter(zombie => {
+                    const dx = zombie.x - 600;
+                    const dy = zombie.y - (-500);
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    
+                    if (distance < clearRadius && !zombie.dying) {
+                        return false;
+                    }
+                    return true;
+                });
+                
+                zombies.push(new Zombie(600, -500, true));
+                lastBossSpawnTime = gameTime;
+                showNotification('BOSS INCOMING!');
+                
+                return;
+            }
+            
+            const aliveBosses = zombies.filter(z => z.isBoss && !z.dying);
+            if (timeSinceLastBoss < 1 || aliveBosses.length > 0) {
+                return;
+            }
+            
+            const numGroups = 3 + Math.floor(difficulty / 2);
+            const groupSize = 3;
+            const zombieSpacing = 48;
+            const groupPadding = 135;
+            const startY = CONFIG.INITIAL_SPAWN_Y;
+            
+            const groupWidth = groupSize * zombieSpacing;
+            const totalWidth = Math.min(numGroups * groupWidth + (numGroups - 1) * groupPadding, 
+                                        COMBAT_ZONE_END - COMBAT_ZONE_START - 60);
+            const startX = COMBAT_ZONE_START + (COMBAT_ZONE_END - COMBAT_ZONE_START - totalWidth) / 2;
+            
+            const numRows = 2 + Math.floor(difficulty / 3);
+            
+            for (let r = 0; r < numRows; r++) {
+                for (let g = 0; g < numGroups; g++) {
+                    const groupX = startX + g * (groupWidth + groupPadding);
+                    const groupY = startY - r * 240;
+                    
+                    for (let row = 0; row < groupSize; row++) {
+                        for (let col = 0; col < groupSize; col++) {
+                            const x = groupX + col * zombieSpacing;
+                            const y = groupY + row * zombieSpacing;
+                            
+                            if (x > COMBAT_ZONE_START && x < COMBAT_ZONE_END) {
+                                zombies.push(new Zombie(x, y, false));
+                            }
+                        }
+                    }
+                }
+            }
+            
+            if (Math.random() < CONFIG.GUN_PANEL_FREQUENCY) {
+                const rand = Math.random();
+                if (CONFIG.WEAPON_R3_AVAILABLE && rand < 0.05) {
+                    panels.push(new Panel(120, startY, 'weaponR3'));
+                } else if (CONFIG.WEAPON_R2_AVAILABLE && rand < 0.1) {
+                    panels.push(new Panel(120, startY, 'weaponR2'));
+                } else {
+                    panels.push(new Panel(120, startY, 'weaponPower'));
+                }
+            }
+            if (Math.random() < CONFIG.RAMPART_PANEL_FREQUENCY) {
+                panels.push(new Panel(1080, startY, 'rampart'));
+            }
+        }
+        
+        function getShotPower() {
+            return CONFIG.BASE_KILLS_PER_SHOT + (player.gunLevel - 1) * CONFIG.GUN_POWER_MULTIPLIER;
+        }
+        
+        function gameOver() {
+            gameRunning = false;
+            document.getElementById('finalScore').textContent = player.score;
+            document.getElementById('gameOver').style.display = 'block';
+        }
+        
+        function startGame() {
+            gameRunning = true;
+            gameTime = 0;
+            firingSoundTimer = 0;
+            explosionSoundTimer = 0;
+            lastBossSpawnTime = -100;
+            firstMiddleShot = true;
+            player.lane = 1;
+            player.rampartSize = CONFIG.INITIAL_RAMPART_SIZE;
+            player.gunLevel = 1;
+            player.score = 0;
+            player.weaponType = 'R1';
+            player.bulletsPerShot = 1;
+            CONFIG.WEAPON_R2_AVAILABLE = true;
+            CONFIG.WEAPON_R3_AVAILABLE = true;
+            
+            zombies = [];
+            panels = [];
+            bullets = [];
+            particles = [];
+            explosions = [];
+            rampartDestructions = [];
+            initializeBackground();
+            initializeRocks();
+            
+            document.getElementById('startScreen').style.display = 'none';
+            document.getElementById('ui').style.display = 'block';
+            document.getElementById('gameOver').style.display = 'none';
+            
+            lastTime = performance.now();
+            requestAnimationFrame(gameLoop);
+        }
+        
+        let prevLane = player.lane;
+        
+        function update(deltaTime) {
+            if (!gameRunning) return;
+            
+            gameTime += deltaTime;
+            bgOffset += 90 * deltaTime;
+            if (bgOffset > 384) bgOffset -= 384;
+            
+            firingSoundTimer += deltaTime;
+            explosionSoundTimer += deltaTime;
+            
+            if (player.muzzleFlash) {
+                player.muzzleTimer -= deltaTime;
+                if (player.muzzleTimer <= 0) player.muzzleFlash = false;
+            }
+            
+            if (player.lane !== prevLane) {
+                if (player.lane === 1) {
+                    player.x = 600;
+                    player.baseX = 600;
+                }
+                prevLane = player.lane;
+            }
+            
+            if (player.lane === 1) {
+                player.x += player.walkingDirection * CONFIG.MIDDLE_LANE_WALK_SPEED * deltaTime;
+                
+                const leftBound = player.baseX - CONFIG.MIDDLE_LANE_WALK_DISTANCE / 2;
+                const rightBound = player.baseX + CONFIG.MIDDLE_LANE_WALK_DISTANCE / 2;
+                
+                if (player.walkingDirection > 0 && player.x >= rightBound) {
+                    player.walkingDirection = -1;
+                    player.direction = player.walkingDirection;
+                } else if (player.walkingDirection < 0 && player.x <= leftBound) {
+                    player.walkingDirection = 1;
+                    player.direction = player.walkingDirection;
+                }
+                
+                player.x = Math.max(COMBAT_ZONE_START + 50, Math.min(COMBAT_ZONE_END - 50, player.x));
+            } else {
+                const targetX = LANES[player.lane];
+                player.x += (targetX - player.x) * CONFIG.LANE_MOVE_SPEED;
+                
+                if (player.lane === 0) player.baseX = LANES[0];
+                else if (player.lane === 2) player.baseX = LANES[2];
+            }
+            
+            player.frameTime += deltaTime * CONFIG.PLAYER_ANIMATION_SPEED;
+            if (player.frameTime >= 1) {
+                player.frame = (player.frame + 1) % 8;
+                player.frameTime = 0;
+            }
+            
+            waveTimer += deltaTime;
+            if (waveTimer >= nextWaveTime) {
+                waveTimer = 0;
+                nextWaveTime = Math.max(0.8, 2 - gameTime / 20);
+                spawnWave();
+            }
+            
+            shootTimer += deltaTime;
+            if (shootTimer > CONFIG.FIRE_RATE) {
+                shootTimer = 0;
+                
+                if (player.lane === 1) {
+                    const livingZombies = zombies.filter(z => !z.dying);
+                    if (livingZombies.length > 0) {
+                        if (firingSoundTimer >= CONFIG.FIRING_SOUND_DELAY) {
+                            playSound(getFiringSoundName());
+                            firingSoundTimer = 0;
+                        }
+                        
+                        const angles = player.bulletsPerShot === 1 ? [CONFIG.BULLET_MOVEMENT_ANGLE] :
+                                     player.bulletsPerShot === 2 ? [
+                                         CONFIG.BULLET_MOVEMENT_ANGLE - CONFIG.BULLET_SPREAD_ANGLE,
+                                         CONFIG.BULLET_MOVEMENT_ANGLE + CONFIG.BULLET_SPREAD_ANGLE
+                                     ] : [
+                                         CONFIG.BULLET_MOVEMENT_ANGLE - CONFIG.BULLET_SPREAD_ANGLE,
+                                         CONFIG.BULLET_MOVEMENT_ANGLE,
+                                         CONFIG.BULLET_MOVEMENT_ANGLE + CONFIG.BULLET_SPREAD_ANGLE
+                                     ];
+                        angles.forEach(angle => {
+                            bullets.push(new CombatBullet(player.x, player.y - 90, angle));
+                        });
+                        player.muzzleFlash = true;
+                        player.muzzleTimer = CONFIG.MUZZLE_DURATION;
+                    }
+                } else {
+                    if (firingSoundTimer >= CONFIG.FIRING_SOUND_DELAY) {
+                        playSound(getFiringSoundName());
+                        firingSoundTimer = 0;
+                    }
+                    bullets.push(new PanelBullet(player.x, player.y - 90, player.lane));
+                }
+            }
+            
+            zombies = zombies.filter(zombie => {
+                if (zombie.dying) return false;
+                zombie.update(deltaTime);
+                
+                const rampartY = player.y - 240;
+                
+                if (player.rampartSize > 0 && zombie.y >= rampartY - 150 && zombie.y <= rampartY + 60) {
+                    if (zombie.x >= COMBAT_ZONE_START && zombie.x <= COMBAT_ZONE_END) {
+                        player.rampartSize = Math.max(0, player.rampartSize - CONFIG.RAMPART_BLOCKS_PER_ZOMBIE);
+                        rampartDestructions.push(new RampartDestruction(zombie.x, rampartY));
+                        for (let i = 0; i < 15; i++) {
+                            particles.push({
+                                x: zombie.x,
+                                y: rampartY,
+                                vx: (Math.random() - 0.5) * 60,
+                                vy: (Math.random() - 0.5) * 60,
+                                life: 1,
+                                color: '#ff0000',
+                                size: 24
+                            });
+                        }
+                        return false;
+                    }
+                }
+                
+                if (zombie.y > player.y - 90) {
+                    if (player.rampartSize > 0) {
+                        player.rampartSize = Math.max(0, player.rampartSize - CONFIG.RAMPART_BLOCKS_PER_ZOMBIE);
+                        rampartDestructions.push(new RampartDestruction(zombie.x, player.y));
+                        for (let i = 0; i < 15; i++) {
+                            particles.push({
+                                x: zombie.x,
+                                y: player.y,
+                                vx: (Math.random() - 0.5) * 60,
+                                vy: (Math.random() - 0.5) * 60,
+                                life: 1,
+                                color: '#ff0000',
+                                size: 24
+                            });
+                        }
+                        return false;
+                    } else {
+                        gameOver();
+                        return false;
+                    }
+                }
+                
+                return zombie.y < canvas.height + 150;
+            });
+            
+            panels = panels.filter(panel => {
+                if (panel.collected) return false;
+                panel.update(deltaTime);
+                return panel.y < canvas.height + 150;
+            });
+            
+            bullets = bullets.filter(bullet => !bullet.update(deltaTime));
+            
+            particles = particles.filter(particle => {
+                particle.x += particle.vx;
+                particle.y += particle.vy;
+                particle.vx *= 0.9;
+                particle.vy *= 0.9;
+                particle.life -= deltaTime * 3;
+                particle.size *= 0.95;
+                return particle.life > 0;
+            });
+            
+            explosions = explosions.filter(exp => {
+                exp.radius += 450 * deltaTime;
+                return exp.radius < exp.maxRadius;
+            });
+            
+            rampartDestructions = rampartDestructions.filter(destruction => destruction.update(deltaTime));
+            
+            document.getElementById('rampartSize').textContent = player.rampartSize;
+            document.getElementById('gunLevel').textContent = player.gunLevel;
+            document.getElementById('shotPower').textContent = getShotPower();
+            document.getElementById('score').textContent = player.score;
+        }
+        
+        function draw() {
+            ctx.fillStyle = CONFIG.BACKGROUND_COLOR;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            grounds.forEach(ground => {
+                const groundImg = images[`ground${ground.type}`];
+                if (groundImg && groundImg.complete) {
+                    const groundWidth = groundImg.width * CONFIG.GROUND_SCALE;
+                    const groundHeight = groundImg.height * CONFIG.GROUND_SCALE;
+                    ctx.drawImage(groundImg, ground.x - groundWidth / 2, ground.y, groundWidth, groundHeight);
+                }
+            });
+            
+            rocks.forEach(rock => {
+                const rockImg = images[`rock${rock.type}`];
+                if (rockImg && rockImg.complete) {
+                    const rockWidth = rockImg.width * CONFIG.ROCK_SCALE;
+                    const rockHeight = rockImg.height * CONFIG.ROCK_SCALE;
+                    ctx.drawImage(rockImg, rock.x - rockWidth / 2, rock.y - rockHeight, rockWidth, rockHeight);
+                }
+            });
+            
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+            ctx.lineWidth = 6;
+            ctx.setLineDash([30, 15]);
+            ctx.beginPath();
+            ctx.moveTo(240, 0);
+            ctx.lineTo(240, canvas.height);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(960, 0);
+            ctx.lineTo(960, canvas.height);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            
+            ctx.fillStyle = '#fff';
+            ctx.font = 'bold 18px Courier New';
+            ctx.textAlign = 'center';
+            ctx.fillText('WEAPON', 120, 60);
+            ctx.fillText('COMBAT', 600, 60);
+            ctx.fillText('RAMPART', 1080, 60);
+            
+            if (player.lane === 0) {
+                ctx.fillStyle = 'rgba(0, 255, 255, 0.1)';
+                ctx.fillRect(0, 0, 240, canvas.height);
+            } else if (player.lane === 1) {
+                ctx.fillStyle = 'rgba(255, 0, 0, 0.1)';
+                ctx.fillRect(240, 0, 720, canvas.height);
+            } else {
+                ctx.fillStyle = 'rgba(0, 255, 0, 0.1)';
+                ctx.fillRect(960, 0, 240, canvas.height);
+            }
+            
+            explosions.forEach(exp => {
+                ctx.globalAlpha = 1 - (exp.radius / exp.maxRadius);
+                if (images.explosion) {
+                    ctx.drawImage(images.explosion, 
+                        exp.x - exp.radius, exp.y - exp.radius, 
+                        exp.radius * 2, exp.radius * 2);
+                } else {
+                    ctx.strokeStyle = exp.color;
+                    ctx.lineWidth = 9;
+                    ctx.beginPath();
+                    ctx.arc(exp.x, exp.y, exp.radius, 0, Math.PI * 2);
+                    ctx.stroke();
+                }
+                ctx.globalAlpha = 1;
+            });
+            
+            rampartDestructions.forEach(destruction => destruction.draw());
+            
+            panels.forEach(panel => panel.draw());
+            zombies.forEach(zombie => zombie.draw());
+            bullets.forEach(bullet => bullet.draw());
+            
+            particles.forEach(particle => {
+                ctx.fillStyle = particle.color;
+                ctx.globalAlpha = particle.life;
+                ctx.fillRect(particle.x - particle.size/2, particle.y - particle.size/2, 
+                    particle.size, particle.size);
+            });
+            ctx.globalAlpha = 1;
+            
+            const frameImg = images[`walk${player.frame}`];
+            const handImg = images[`handWalk${player.frame}`];
+            const weaponImg = images[`weapon${player.weaponType}`];
+            
+            if (frameImg) {
+                const width = frameImg.width * CONFIG.PLAYER_SCALE;
+                const height = frameImg.height * CONFIG.PLAYER_SCALE;
+
+                ctx.save();
+                ctx.translate(player.x, player.y);
+                
+                if (player.direction === -1) {
+                    ctx.scale(-1, 1);
+                }
+
+                if (weaponImg) {
+                    const weaponWidth = weaponImg.width * CONFIG.PLAYER_SCALE * CONFIG.WEAPON_SCALE;
+                    const weaponHeight = weaponImg.height * CONFIG.PLAYER_SCALE * CONFIG.WEAPON_SCALE;
+                    const weaponX = player.direction === 1 ? CONFIG.WEAPON_X_OFFSET : -CONFIG.WEAPON_X_OFFSET;
+                    const weaponY = -height * CONFIG.WEAPON_Y_OFFSET;
+                    
+                    ctx.save();
+                    ctx.translate(weaponX, weaponY);
+                    const gunAngle = player.direction === 1 ? CONFIG.GUN_ANGLE_RIGHT : CONFIG.GUN_ANGLE_LEFT;
+                    ctx.rotate(-Math.PI / 2 + (gunAngle - 90) * Math.PI / 180 * (player.direction === 1 ? 1 : -1));
+                    ctx.drawImage(weaponImg, -weaponWidth / 2, -weaponHeight / 2, weaponWidth, weaponHeight);
+                    
+                    if (player.muzzleFlash && images.muzzle) {
+                        const muzzleWidth = images.muzzle.width * CONFIG.PLAYER_SCALE * CONFIG.WEAPON_SCALE * CONFIG.MUZZLE_SCALE;
+                        const muzzleHeight = images.muzzle.height * CONFIG.PLAYER_SCALE * CONFIG.WEAPON_SCALE * CONFIG.MUZZLE_SCALE;
+                        ctx.drawImage(images.muzzle, weaponWidth * CONFIG.MUZZLE_X_OFFSET, muzzleHeight * CONFIG.MUZZLE_Y_OFFSET, muzzleWidth, muzzleHeight);
+                    }
+                    ctx.restore();
+                }
+
+                if (handImg) {
+                    const handWidth = handImg.width * CONFIG.PLAYER_SCALE * CONFIG.HAND_SCALE;
+                    const handHeight = handImg.height * CONFIG.PLAYER_SCALE * CONFIG.HAND_SCALE;
+                    
+                    const handX = player.direction === 1 ? CONFIG.HAND_X_OFFSET_RIGHT : CONFIG.HAND_X_OFFSET_LEFT;
+                    const handY = -height * CONFIG.HAND_Y_OFFSET;
+                    ctx.drawImage(handImg, handX - handWidth / 2, handY - handHeight, handWidth, handHeight);
+                    
+                    ctx.save();
+                    ctx.scale(-1, 1);
+                    const hand2Width = handImg.width * CONFIG.PLAYER_SCALE * CONFIG.HAND2_SCALE;
+                    const hand2Height = handImg.height * CONFIG.PLAYER_SCALE * CONFIG.HAND2_SCALE;
+                    const hand2X = player.direction === 1 ? CONFIG.HAND2_X_OFFSET_RIGHT : CONFIG.HAND2_X_OFFSET_LEFT;
+                    const hand2Y = -height * CONFIG.HAND2_Y_OFFSET;
+                    ctx.drawImage(handImg, hand2X - hand2Width / 2, hand2Y - hand2Height, hand2Width, hand2Height);
+                    ctx.restore();
+                }
+
+                ctx.drawImage(frameImg, -width / 2, -height, width, height);
+                ctx.restore();
+            } else {
+                const tankLevel = Math.min(3, Math.ceil(player.gunLevel / 3));
+                
+                if (images['tank' + tankLevel]) {
+                    ctx.save();
+                    ctx.translate(player.x, player.y);
+                    ctx.drawImage(images['tank' + tankLevel], -CONFIG.MAIN_TANK_SIZE/2, -CONFIG.MAIN_TANK_SIZE/2, CONFIG.MAIN_TANK_SIZE, CONFIG.MAIN_TANK_SIZE);
+                    ctx.restore();
+                } else {
+                    ctx.fillStyle = '#00ff00';
+                    ctx.fillRect(player.x - 30, player.y - 60, 60, 60);
+                }
+            }
+            
+            if (player.rampartSize > 0) {
+                const iconSize = CONFIG.RAMPART_TANK_ICON_SIZE;
+                const rampartY = player.y - 240;
+                
+                const combatZoneWidth = COMBAT_ZONE_END - COMBAT_ZONE_START;
+                const tankSpacing = iconSize;
+                const tanksPerRow = Math.floor(combatZoneWidth / tankSpacing);
+                
+                let unitIndex = 0;
+                
+                for (let row = 0; unitIndex < player.rampartSize; row++) {
+                    const tanksInThisRow = Math.min(tanksPerRow, player.rampartSize - unitIndex);
+                    const rowWidth = (tanksInThisRow - 1) * tankSpacing;
+                    const startX = COMBAT_ZONE_START + (combatZoneWidth - rowWidth) / 2;
+                    
+                    for (let col = 0; col < tanksInThisRow; col++) {
+                        const x = startX + col * tankSpacing;
+                        const y = rampartY - (row * (iconSize - 2));
+                        
+                        if (images.tankIcon) {
+                            ctx.drawImage(images.tankIcon, 
+                                x - iconSize/2, 
+                                y - iconSize/2, 
+                                iconSize, 
+                                iconSize);
+                        } else {
+                            ctx.fillStyle = '#4CAF50';
+                            ctx.fillRect(x - iconSize/2, y - iconSize/2, iconSize, iconSize);
+                        }
+                        
+                        unitIndex++;
+                    }
+                }
+                
+                if (player.rampartSize > tanksPerRow * 3) {
+                    ctx.fillStyle = '#0f0';
+                    ctx.font = 'bold 16px Courier New';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('Rampart: ' + player.rampartSize, player.x, rampartY + 45);
+                }
+            }
+        }
+        
+        let lastTime = 0;
+        function gameLoop(currentTime) {
+            const deltaTime = Math.min((currentTime - lastTime) / 1000, 0.1);
+            lastTime = currentTime;
+            
+            update(deltaTime);
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+        
+        function checkLoaded() {
+            if (imagesLoaded === totalImages && soundsLoaded === totalSounds) {
+                console.log('All assets loaded!');
+            } else {
+                requestAnimationFrame(checkLoaded);
+            }
+        }
+        
+        checkLoaded();
+    </script>
+</body>
+</html>
