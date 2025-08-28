@@ -310,6 +310,103 @@
             text-transform: uppercase;
             letter-spacing: 2px;
         }
+
+        #namePrompt {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: linear-gradient(180deg, #4a4a94 0%, #383883 50%, #2c2c72 100%);
+    border: 4px solid #ffffff;
+    border-bottom: 4px solid #1a1a4a;
+    border-right: 4px solid #1a1a4a;
+    color: #ffffff;
+    padding: 30px;
+    text-align: center;
+    z-index: 200;
+    display: none;
+    font-family: 'Courier New', monospace;
+    text-shadow: 2px 2px 0px #1a1a4a;
+}
+
+#namePrompt input {
+    background: #ffffff;
+    border: 2px solid #666;
+    padding: 10px;
+    font-family: 'Courier New', monospace;
+    font-size: 16px;
+    margin: 15px;
+    width: 200px;
+    text-align: center;
+}
+
+#leaderboard {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.9);
+    color: white;
+    display: none;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 150;
+    font-family: 'Courier New', monospace;
+}
+
+#leaderboard h2 {
+    color: #ffffff;
+    margin-bottom: 30px;
+    font-size: 36px;
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    text-shadow: 3px 3px 0px #333;
+}
+
+.leaderboard-entry {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 400px;
+    padding: 10px 20px;
+    margin: 5px 0;
+    background: linear-gradient(180deg, #444 0%, #333 50%, #222 100%);
+    border: 2px solid #666;
+    font-size: 18px;
+    font-weight: bold;
+}
+
+.leaderboard-entry:nth-child(1) {
+    background: linear-gradient(180deg, #ffd700 0%, #ffb700 50%, #ff9500 100%);
+    color: #000;
+}
+
+.leaderboard-entry:nth-child(2) {
+    background: linear-gradient(180deg, #c0c0c0 0%, #a0a0a0 50%, #808080 100%);
+    color: #000;
+}
+
+.leaderboard-entry:nth-child(3) {
+    background: linear-gradient(180deg, #cd7f32 0%, #b8691a 50%, #a0541a 100%);
+    color: #fff;
+}
+
+.rank {
+    font-size: 24px;
+    min-width: 50px;
+}
+
+.name {
+    flex: 1;
+    text-align: center;
+}
+
+.player-score {
+    min-width: 80px;
+    text-align: right;
+}
     </style>
 </head>
 <body>
@@ -328,7 +425,7 @@
         <h1>I AM LEGEND</h1>
         <div class="menu-container">
             <div class="menu-button start-button" onclick="startGame()">PLAY</div>
-            <div class="menu-button">PAUSE</div>
+           <div class="menu-button" onclick="showLeaderboard()">LEADERBOARD</div>
             <div class="menu-button">OPTIONS</div>
         </div>
         <div class="controls">
@@ -338,11 +435,12 @@
         </div>
     </div>
 
-    <div id="gameOver">
-        <h2>GAME OVER</h2>
-        <p>Final Score: <span id="finalScore">0</span></p>
-        <button onclick="location.reload()">TRY AGAIN</button>
-    </div>
+<div id="gameOver">
+    <h2>GAME OVER</h2>
+    <p>Final Score: <span id="finalScore">0</span></p>
+    <button onclick="promptForName()">SUBMIT SCORE</button>
+    <button onclick="location.reload()">TRY AGAIN</button>
+</div>
 
     <script>
         const canvas = document.getElementById('gameCanvas');
@@ -1684,6 +1782,131 @@
         }
         
         checkLoaded();
+
+        // Leaderboard functions
+function getLeaderboard() {
+    const saved = localStorage.getItem('zombieLeaderboard');
+    return saved ? JSON.parse(saved) : [];
+}
+
+function saveLeaderboard(leaderboard) {
+    localStorage.setItem('zombieLeaderboard', JSON.stringify(leaderboard));
+}
+
+function addToLeaderboard(name, score) {
+    let leaderboard = getLeaderboard();
+    
+    const existingIndex = leaderboard.findIndex(p => p.name === name);
+    
+    if (existingIndex >= 0) {
+        if (score > leaderboard[existingIndex].score) {
+            leaderboard[existingIndex].score = score;
+            leaderboard[existingIndex].date = new Date().toLocaleDateString();
+        }
+    } else {
+        leaderboard.push({
+            name: name,
+            score: score,
+            date: new Date().toLocaleDateString()
+        });
+    }
+    
+    leaderboard.sort((a, b) => b.score - a.score);
+    leaderboard = leaderboard.slice(0, 50);
+    
+    saveLeaderboard(leaderboard);
+    return leaderboard.findIndex(p => p.name === name) + 1;
+}
+
+function showLeaderboard() {
+    const leaderboard = getLeaderboard();
+    const leaderboardList = document.getElementById('leaderboardList');
+    
+    if (leaderboard.length === 0) {
+        leaderboardList.innerHTML = '<p style="color: #ccc; font-size: 18px;">No scores yet! Be the first to play!</p>';
+    } else {
+        leaderboardList.innerHTML = leaderboard.slice(0, 10).map((entry, index) => 
+            `<div class="leaderboard-entry">
+                <span class="rank">#${index + 1}</span>
+                <span class="name">${entry.name}</span>
+                <span class="player-score">${entry.score}</span>
+            </div>`
+        ).join('');
+    }
+    
+    document.getElementById('leaderboard').style.display = 'flex';
+}
+
+function hideLeaderboard() {
+    document.getElementById('leaderboard').style.display = 'none';
+}
+
+function promptForName() {
+    document.getElementById('promptScore').textContent = player.score;
+    document.getElementById('namePrompt').style.display = 'block';
+    document.getElementById('playerName').focus();
+}
+
+function submitScore() {
+    const nameInput = document.getElementById('playerName');
+    const name = nameInput.value.trim();
+    
+    if (!name) {
+        alert('Please enter your name!');
+        return;
+    }
+    
+    if (name.length > 15) {
+        alert('Name too long! Maximum 15 characters.');
+        return;
+    }
+    
+    const rank = addToLeaderboard(name, player.score);
+    closeNamePrompt();
+    
+    if (rank <= 10) {
+        showNotification(`NEW HIGH SCORE! Rank #${rank}!`, 3000);
+    } else {
+        showNotification(`Score submitted! Rank #${rank}`, 2000);
+    }
+    
+    setTimeout(() => {
+        showLeaderboard();
+    }, 2000);
+}
+
+function closeNamePrompt() {
+    document.getElementById('namePrompt').style.display = 'none';
+    document.getElementById('playerName').value = '';
+}
+
+// Add Enter key support
+document.addEventListener('DOMContentLoaded', function() {
+    const nameInput = document.getElementById('playerName');
+    if (nameInput) {
+        nameInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                submitScore();
+            }
+        });
+    }
+});
+
     </script>
+    <div id="namePrompt">
+    <h3>ENTER YOUR NAME</h3>
+    <p>Score: <span id="promptScore">0</span></p>
+    <input type="text" id="playerName" maxlength="15" placeholder="Your Name">
+    <br>
+    <button onclick="submitScore()">SUBMIT</button>
+    <button onclick="closeNamePrompt()">CANCEL</button>
+</div>
+
+<div id="leaderboard">
+    <h2>LEADERBOARD</h2>
+    <div id="leaderboardList"></div>
+    <br>
+    <button onclick="hideLeaderboard()" style="background: #666; color: white; padding: 15px 30px; border: 2px solid #999; font-family: 'Courier New', monospace; font-size: 16px; cursor: pointer;">BACK TO MENU</button>
+</div>
 </body>
 </html>
