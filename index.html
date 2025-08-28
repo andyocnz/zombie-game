@@ -458,9 +458,9 @@
             RAMPART_KILL_MULTIPLIER: 0,
             GUN_DAMAGE_PER_LEVEL: 1,
             GUN_POWER_MULTIPLIER: 1,
-            ZOMBIE_SPEED: 150,
+            ZOMBIE_SPEED: 200,
             INITIAL_SPAWN_Y: -150,
-            WAVE_SPAWN_TIME: 1.5,
+            WAVE_SPAWN_TIME: 1,
             GUN_UPGRADE_TIME: 1.0,
             RAMPART_UPGRADE_TIME: 0.8,
             GUN_PANEL_FREQUENCY: 0.5,
@@ -1273,7 +1273,7 @@
             const timeSinceLastBoss = gameTime - lastBossSpawnTime;
             const bossWaveClearTime = 3;
             
-   const bossProb = Math.min(0.25 + difficulty * 0.03, 0.4);
+            const bossProb = Math.min(0.3 + difficulty * 0.04, 0.5);
             if (gameTime > CONFIG.BOSS_SPAWN_DELAY && 
                 timeSinceLastBoss > bossWaveClearTime && 
                 Math.random() < bossProb) {
@@ -1303,8 +1303,8 @@ if (aliveBosses.length > 1) {
     return;
 }
             
-            const numGroups = 3 + Math.floor(difficulty / 2);
-            const groupSize = 3;
+            const numGroups = 4 + Math.floor(difficulty / 1.5);
+            const groupSize = 4;
             const zombieSpacing = 48;
             const groupPadding = 135;
             const startY = CONFIG.INITIAL_SPAWN_Y;
