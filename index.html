@@ -5,6 +5,93 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>I Am Legend</title>
     <style>
+
+
+        #multiplayerMenu {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(circle at center, #4a8c4a 0%, #3a7c3a 30%, #2a6c2a 60%, #1a5c1a 100%);
+    color: white;
+    display: none;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 100;
+    font-family: 'Courier New', monospace;
+}
+
+.connection-step {
+    background: rgba(0, 0, 0, 0.7);
+    border: 3px solid #4a7a4a;
+    border-radius: 8px;
+    padding: 20px;
+    margin: 15px 0;
+    width: 80%;
+    max-width: 600px;
+    text-align: center;
+}
+
+.connection-step h3 {
+    color: #7cc77c;
+    margin-bottom: 15px;
+    font-size: 18px;
+    text-transform: uppercase;
+}
+
+.connection-step textarea {
+    width: 100%;
+    height: 120px;
+    background: #2a2a2a;
+    color: #ffffff;
+    border: 2px solid #4a7a4a;
+    border-radius: 4px;
+    padding: 10px;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    resize: vertical;
+    margin-bottom: 10px;
+}
+
+.connection-step button {
+    background: linear-gradient(180deg, #6bb66b 0%, #5aa55a 50%, #4a944a 100%);
+    border: 3px solid #7cc77c;
+    border-bottom: 3px solid #3a833a;
+    border-right: 3px solid #3a833a;
+    color: #ffffff;
+    font-family: 'Courier New', monospace;
+    font-size: 14px;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding: 12px 20px;
+    cursor: pointer;
+    text-shadow: 1px 1px 0px #2a6a2a;
+    margin: 5px;
+}
+
+.connection-step button:hover {
+    background: linear-gradient(180deg, #7cc77c 0%, #6bb66b 50%, #5aa55a 100%);
+}
+
+.connection-step button:active {
+    border-top: 3px solid #3a833a;
+    border-left: 3px solid #3a833a;
+    border-bottom: 3px solid #7cc77c;
+    border-right: 3px solid #7cc77c;
+}
+
+#hostStatus, #joinStatus {
+    color: #ffff99;
+    font-size: 16px;
+    font-weight: bold;
+    margin-top: 20px;
+    padding: 10px;
+    background: rgba(0, 0, 0, 0.5);
+    border-radius: 4px;
+}
         * {
             margin: 0;
             padding: 0;
@@ -426,7 +513,7 @@
         <div class="menu-container">
             <div class="menu-button start-button" onclick="startGame()">PLAY</div>
            <div class="menu-button" onclick="showLeaderboard()">LEADERBOARD</div>
-            <div class="menu-button">OPTIONS</div>
+            <div class="menu-button" onclick="showMultiplayerMenu()">MULTIPLAYER</div>
         </div>
         <div class="controls">
             <p>Arrow Keys or A/D to move between lanes</p>
@@ -434,7 +521,49 @@
             <p>Don't let zombies touch you!</p>
         </div>
     </div>
-
+<!-- Add this new multiplayer menu div after your existing startScreen div -->
+<div id="multiplayerMenu">
+    <h1>MULTIPLAYER SETUP</h1>
+    <div class="menu-container">
+        <div class="menu-button start-button" onclick="hostGame()">HOST GAME</div>
+        <div class="menu-button" onclick="showJoinForm()">JOIN GAME</div>
+        <div class="menu-button" onclick="hideMultiplayerMenu()">BACK TO MENU</div>
+    </div>
+    
+    <!-- Host Setup Section -->
+    <div id="hostSetup" style="display: none;">
+        <div class="connection-step">
+            <h3>STEP 1: Share this code with your friend</h3>
+            <textarea id="offerCode" readonly></textarea>
+            <button onclick="copyOfferCode()">COPY CODE</button>
+        </div>
+        
+        <div class="connection-step">
+            <h3>STEP 2: Enter their response code</h3>
+            <textarea id="answerInput" placeholder="Paste your friend's response code here..."></textarea>
+            <button onclick="connectWithAnswer()">CONNECT & START GAME</button>
+        </div>
+        
+        <div id="hostStatus">Waiting for connection...</div>
+    </div>
+    
+    <!-- Join Setup Section -->
+    <div id="joinSetup" style="display: none;">
+        <div class="connection-step">
+            <h3>STEP 1: Enter host's invitation code</h3>
+            <textarea id="offerInput" placeholder="Paste the host's code here..."></textarea>
+            <button onclick="createAnswer()">CREATE RESPONSE</button>
+        </div>
+        
+        <div class="connection-step" id="responseSection" style="display: none;">
+            <h3>STEP 2: Share this response with the host</h3>
+            <textarea id="answerCode" readonly></textarea>
+            <button onclick="copyAnswerCode()">COPY RESPONSE</button>
+        </div>
+        
+        <div id="joinStatus">Enter the host's code to continue...</div>
+    </div>
+</div>
 <div id="gameOver">
     <h2>GAME OVER</h2>
     <p>Final Score: <span id="finalScore">0</span></p>
