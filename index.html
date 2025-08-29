@@ -2022,7 +2022,46 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
+// Basic multiplayer menu navigation functions
+function showMultiplayerMenu() {
+    document.getElementById('startScreen').style.display = 'none';
+    document.getElementById('multiplayerMenu').style.display = 'flex';
+}
 
+function hideMultiplayerMenu() {
+    document.getElementById('multiplayerMenu').style.display = 'none';
+    document.getElementById('startScreen').style.display = 'flex';
+    // Reset all setup sections
+    document.getElementById('hostSetup').style.display = 'none';
+    document.getElementById('joinSetup').style.display = 'none';
+    document.getElementById('responseSection').style.display = 'none';
+}
+
+function hostGame() {
+    document.getElementById('hostSetup').style.display = 'block';
+    document.getElementById('joinSetup').style.display = 'none';
+    document.getElementById('hostStatus').textContent = 'Setting up hosting...';
+}
+
+function showJoinForm() {
+    document.getElementById('joinSetup').style.display = 'block';
+    document.getElementById('hostSetup').style.display = 'none';
+    document.getElementById('joinStatus').textContent = 'Enter the host\'s code to continue...';
+}
+
+function copyOfferCode() {
+    const codeElement = document.getElementById('offerCode');
+    codeElement.select();
+    document.execCommand('copy');
+    alert('Code copied to clipboard!');
+}
+
+function copyAnswerCode() {
+    const codeElement = document.getElementById('answerCode');
+    codeElement.select();
+    document.execCommand('copy');
+    alert('Response code copied to clipboard!');
+}
     </script>
     <div id="namePrompt">
     <h3>ENTER YOUR NAME</h3>
