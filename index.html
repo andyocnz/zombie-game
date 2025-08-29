@@ -1715,6 +1715,25 @@ if (aliveBosses.length > 1) {
             document.getElementById('gunLevel').textContent = player.gunLevel;
             document.getElementById('shotPower').textContent = getShotPower();
             document.getElementById('score').textContent = player.score;
+
+            // ADD MULTIPLAYER CODE HERE 
+            if (multiplayerMode && dataChannel && dataChannel.readyState === 'open') {
+                sendGameData({
+                    type: 'playerUpdate',
+                    player: {
+                        x: player.x,
+                        y: player.y,
+                        lane: player.lane,
+                        score: player.score,
+                        frame: player.frame,
+                        direction: player.direction
+                    }
+                });
+            }
+            
+            } // <-  update() function
+
+            
         }
         
         function draw() {
@@ -1910,6 +1929,23 @@ if (aliveBosses.length > 1) {
                     ctx.fillText('Rampart: ' + player.rampartSize, player.x, rampartY + 45);
                 }
             }
+       
+        
+        // Draw remote player in multiplayer mode
+if (multiplayerMode && remotePlayer) {
+    ctx.fillStyle = '#ff0000'; // Red color for remote player
+    ctx.fillRect(remotePlayer.x - 30, remotePlayer.y - 60, 60, 60);
+    
+    // Remote player's score
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 16px Courier New';
+    ctx.textAlign = 'center';
+    ctx.fillText(`P2: ${remotePlayer.score}`, remotePlayer.x, remotePlayer.y - 80);
+}
+        
+        
+        
+        
         }
         
         let lastTime = 0;
