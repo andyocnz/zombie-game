@@ -806,7 +806,8 @@
         let nextWaveTime = 1;
         let firingSoundTimer = 0;
         let explosionSoundTimer = 0;
-        let lastBossSpawnTime = -100;
+        let lastBossSpawnTime = 0;
+        let CONFIG.BOSS_HEALTH_MULTIPLIER = 1.5;
         // P2P Multiplayer variables
         let peerConnection = null;
         let dataChannel = null;
@@ -914,11 +915,13 @@
                     const baseHealth = 50;
                     const powerScaling = player.gunLevel * 15;
                     const timeScaling = Math.floor(gameTime / 30) * 10;
-                    this.maxHealth = baseHealth + powerScaling + timeScaling;
+                    this.maxHealth = (baseHealth + powerScaling + timeScaling) * CONFIG.BOSS_HEALTH_MULTIPLIER;
+                    this.health = this.maxHealth;
                 } else {
                     this.maxHealth = 1;
+                    this.health = this.maxHealth;
                 }
-                
+                                
                 this.health = this.maxHealth;
                 this.color = isBoss ? '#ff00ff' : '#cc0000';
                 this.dying = false;
@@ -1416,22 +1419,24 @@
             const bossWaveClearTime = 3;
             
             const bossProb = Math.min(0.3 + difficulty * 0.04, 0.5);
-            if (gameTime > CONFIG.BOSS_SPAWN_DELAY && 
-                timeSinceLastBoss > bossWaveClearTime && 
+            if (gameTime > CONFIG.BOSS_SPAWN_DELAY &&
+                timeSinceLastBoss > bossWaveClearTime &&
                 Math.random() < bossProb) {
-                
+                if (zombies.some(z => z.isBoss && !z.dying)) {
+                    CONFIG.BOSS_HEALTH_MULTIPLIER *= 2;
+                    zombies.forEach(z => { if (z.isBoss && !z.dying) { z.health *= 2; z.maxHealth *= 2; } });
+                }
                 const clearRadius = 300;
                 zombies = zombies.filter(zombie => {
                     const dx = zombie.x - 600;
                     const dy = zombie.y - (-500);
                     const distance = Math.sqrt(dx * dx + dy * dy);
-                    
+                
                     if (distance < clearRadius && !zombie.dying) {
                         return false;
                     }
                     return true;
-                }
-            );
+                });
                 
                 zombies.push(new Zombie(600, -500, true));
                 lastBossSpawnTime = gameTime;
