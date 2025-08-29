@@ -807,7 +807,20 @@
         let firingSoundTimer = 0;
         let explosionSoundTimer = 0;
         let lastBossSpawnTime = -100;
+        // P2P Multiplayer variables
+        let peerConnection = null;
+        let dataChannel = null;
+        let isHost = false;
+        let multiplayerMode = false;
+        let remotePlayer = null;
         
+        const pcConfig = {
+            iceServers: [
+                { urls: 'stun:stun.l.google.com:19302' },
+                { urls: 'stun:stun1.l.google.com:19302' }
+            ],
+            iceCandidatePoolSize: 10
+        };
         // Player with soldier animation properties
         const player = {
             lane: 1,
@@ -2022,6 +2035,159 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
+
+
+// WebRTC Connection Functions
+async function createRoom() {
+    try {
+        isHost = true;
+        peerConnection = new RTCPeerConnection(pcConfig);
+        
+        // Create data channel
+        dataChannel = peerConnection.createDataChannel('game', {
+            ordered: true
+        });
+        
+        dataChannel.onopen = () => {
+            document.getElementById('hostStatus').textContent = 'Connected! Starting game...';
+            setTimeout(startMultiplayerGame, 1000);
+        };
+        
+        dataChannel.onmessage = (event) => {
+            handleRemoteGameData(JSON.parse(event.data));
+        };
+        
+        // Generate offer
+        const offer = await peerConnection.createOffer();
+        await peerConnection.setLocalDescription(offer);
+        
+        // Wait for ICE candidates
+        return new Promise((resolve) => {
+            peerConnection.onicecandidate = (event) => {
+                if (!event.candidate) {
+                    const offerString = btoa(JSON.stringify(peerConnection.localDescription));
+                    document.getElementById('offerCode').value = offerString;
+                    document.getElementById('hostStatus').textContent = 'Share the code with your friend!';
+                    resolve(offerString);
+                }
+            };
+        });
+    } catch (error) {
+        document.getElementById('hostStatus').textContent = 'Error creating room: ' + error.message;
+    }
+}
+
+async function joinRoom(offerString) {
+    try {
+        isHost = false;
+        peerConnection = new RTCPeerConnection(pcConfig);
+        
+        // Handle incoming data channel
+        peerConnection.ondatachannel = (event) => {
+            dataChannel = event.channel;
+            dataChannel.onopen = () => {
+                document.getElementById('joinStatus').textContent = 'Connected! Starting game...';
+                setTimeout(startMultiplayerGame, 1000);
+            };
+            dataChannel.onmessage = (event) => {
+                handleRemoteGameData(JSON.parse(event.data));
+            };
+        };
+        
+        // Set remote offer
+        const offer = JSON.parse(atob(offerString));
+        await peerConnection.setRemoteDescription(offer);
+        
+        // Create answer
+        const answer = await peerConnection.createAnswer();
+        await peerConnection.setLocalDescription(answer);
+        
+        // Wait for ICE candidates
+        return new Promise((resolve) => {
+            peerConnection.onicecandidate = (event) => {
+                if (!event.candidate) {
+                    const answerString = btoa(JSON.stringify(peerConnection.localDescription));
+                    document.getElementById('answerCode').value = answerString;
+                    document.getElementById('joinStatus').textContent = 'Share the response code with the host!';
+                    resolve(answerString);
+                }
+            };
+        });
+    } catch (error) {
+        document.getElementById('joinStatus').textContent = 'Error joining room: ' + error.message;
+    }
+}
+
+async function completeConnection(answerString) {
+    try {
+        const answer = JSON.parse(atob(answerString));
+        await peerConnection.setRemoteDescription(answer);
+        document.getElementById('hostStatus').textContent = 'Connection established! Waiting for peer...';
+    } catch (error) {
+        document.getElementById('hostStatus').textContent = 'Error completing connection: ' + error.message;
+    }
+}
+
+function sendGameData(data) {
+    if (dataChannel && dataChannel.readyState === 'open') {
+        dataChannel.send(JSON.stringify(data));
+    }
+}
+
+function handleRemoteGameData(data) {
+    if (data.type === 'playerUpdate') {
+        // Update remote player position
+        if (remotePlayer) {
+            remotePlayer.x = data.player.x;
+            remotePlayer.y = data.player.y;
+            remotePlayer.lane = data.player.lane;
+            remotePlayer.score = data.player.score;
+            remotePlayer.frame = data.player.frame;
+            remotePlayer.direction = data.player.direction;
+        }
+    }
+}
+
+function startMultiplayerGame() {
+    multiplayerMode = true;
+    
+    // Initialize remote player
+    remotePlayer = {
+        lane: 1,
+        x: 300, // Position remote player on left side
+        y: 1700,
+        rampartSize: 3,
+        gunLevel: 1,
+        score: 0,
+        frame: 0,
+        frameTime: 0,
+        direction: 1
+    };
+    
+    // Hide multiplayer menu and start game
+    document.getElementById('multiplayerMenu').style.display = 'none';
+    document.getElementById('startScreen').style.display = 'none';
+    document.getElementById('ui').style.display = 'block';
+    
+    // Reset game state
+    gameRunning = true;
+    gameTime = 0;
+    player.score = 0;
+    player.lane = 1;
+    player.x = 900; // Position local player on right side
+    
+    zombies = [];
+    bullets = [];
+    panels = [];
+    particles = [];
+    explosions = [];
+    
+    initializeBackground();
+    initializeRocks();
+    
+    lastTime = performance.now();
+    requestAnimationFrame(gameLoop);
+}        
 // Basic multiplayer menu navigation functions
 function showMultiplayerMenu() {
     document.getElementById('startScreen').style.display = 'none';
@@ -2037,10 +2203,12 @@ function hideMultiplayerMenu() {
     document.getElementById('responseSection').style.display = 'none';
 }
 
-function hostGame() {
+async function hostGame() {
     document.getElementById('hostSetup').style.display = 'block';
     document.getElementById('joinSetup').style.display = 'none';
-    document.getElementById('hostStatus').textContent = 'Setting up hosting...';
+    document.getElementById('hostStatus').textContent = 'Creating room...';
+    
+    await createRoom();
 }
 
 function showJoinForm() {
@@ -2048,7 +2216,32 @@ function showJoinForm() {
     document.getElementById('hostSetup').style.display = 'none';
     document.getElementById('joinStatus').textContent = 'Enter the host\'s code to continue...';
 }
+async function createAnswer() {
+    const offerInput = document.getElementById('offerInput');
+    const offerString = offerInput.value.trim();
+    
+    if (!offerString) {
+        document.getElementById('joinStatus').textContent = 'Please enter the host\'s code first!';
+        return;
+    }
+    
+    document.getElementById('joinStatus').textContent = 'Processing connection...';
+    await joinRoom(offerString);
+    document.getElementById('responseSection').style.display = 'block';
+}
 
+async function connectWithAnswer() {
+    const answerInput = document.getElementById('answerInput');
+    const answerString = answerInput.value.trim();
+    
+    if (!answerString) {
+        document.getElementById('hostStatus').textContent = 'Please enter the response code!';
+        return;
+    }
+    
+    document.getElementById('hostStatus').textContent = 'Completing connection...';
+    await completeConnection(answerString);
+}
 function copyOfferCode() {
     const codeElement = document.getElementById('offerCode');
     codeElement.select();
